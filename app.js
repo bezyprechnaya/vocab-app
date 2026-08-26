@@ -847,47 +847,41 @@
   function renderHistory() {
     showScreen("screen-history");
     var list = $("history-list");
-    var pvList = $("history-pv-list");
     while (list.firstChild) list.removeChild(list.firstChild);
-    while (pvList.firstChild) pvList.removeChild(pvList.firstChild);
     return getAllSessions().then(function (all) {
-      // показываем только завершённые дни, новые — сверху;
-      // сессии фразовых глаголов (ключ "pv:<дата>") — в своей секции
-      var isPv = function (s) { return String(s.date).slice(0, 3) === "pv:"; };
-      var days = all.filter(function (s) { return s && s.phase === "done" && !isPv(s); })
-        .sort(function (a, b) { return a.date < b.date ? 1 : -1; });
-      var pvDays = all.filter(function (s) { return s && s.phase === "done" && isPv(s); })
-        .sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+      // объединяем завершённые сессии слов и фразовых глаголов по дате:
+      // одна запись на дату с блоком слов и (если занимались) блоком глаголов
+      var byDate = {};
+      all.forEach(function (s) {
+        if (!s || s.phase !== "done") return;
+        var isPv = String(s.date).slice(0, 3) === "pv:";
+        var date = isPv ? String(s.date).slice(3) : s.date;
+        if (!byDate[date]) byDate[date] = { date: date, words: null, pv: null };
+        if (isPv) byDate[date].pv = s; else byDate[date].words = s;
+      });
+      var days = Object.keys(byDate).map(function (k) { return byDate[k]; })
+        .sort(function (a, b) { return a.date < b.date ? 1 : -1; }); // новые сверху
 
       if (!days.length) {
         var empty = document.createElement("p");
         empty.className = "lead history-empty";
         empty.textContent =
-          "Истории пока нет. Завершите первый день занятий — и здесь появится список выученных слов.";
+          "Истории пока нет. Завершите первый день занятий — и здесь появится список выученных слов и фразовых глаголов.";
         list.appendChild(empty);
+        return;
       }
 
-      if (!pvDays.length) {
-        var emptyPv = document.createElement("p");
-        emptyPv.className = "lead history-empty";
-        emptyPv.textContent =
-          "Истории по фразовым глаголам пока нет. Завершите первый день в режиме фразовых глаголов.";
-        pvList.appendChild(emptyPv);
-      }
-
+      // счётчик — количество уникальных дат с завершёнными занятиями
       $("history-total").textContent = days.length;
-      $("history-pv-total").textContent = pvDays.length;
-      return days.reduce(function (chain, s) {
-        return chain.then(function () { return buildHistoryDay(list, s); });
-      }, Promise.resolve()).then(function () {
-        return pvDays.reduce(function (chain, s) {
-          return chain.then(function () { return buildPvHistoryDay(pvList, s); });
-        }, Promise.resolve());
-      });
+
+      return days.reduce(function (chain, entry) {
+        return chain.then(function () { return buildHistoryDay(list, entry); });
+      }, Promise.resolve());
     });
   }
 
-  function buildHistoryDay(list, s) {
+  // одна запись дня: дата, затем блок слов и (при наличии) блок глаголов
+  function buildHistoryDay(list, entry) {
     var day = document.createElement("article");
     day.className = "history-day";
 
@@ -896,15 +890,55 @@
 
     var date = document.createElement("h2");
     date.className = "history-day-date";
-    date.textContent = formatDateRu(s.date);
-
-    var level = document.createElement("span");
-    level.className = "pos-chip history-level";
-    level.textContent = levelLabel(s.level) || s.level;
-
+    date.textContent = formatDateRu(entry.date);
     head.appendChild(date);
-    head.appendChild(level);
+
+    if (entry.words) {
+      var level = document.createElement("span");
+      level.className = "pos-chip history-level";
+      level.textContent = levelLabel(entry.words.level) || entry.words.level;
+      head.appendChild(level);
+    }
     day.appendChild(head);
+
+    var chain = Promise.resolve();
+    if (entry.words) {
+      chain = chain.then(function () {
+        return appendDayBlock(day, "Слова", entry.words, false, getWord, function (li, w, id) {
+          if (w) {
+            var b = document.createElement("b");
+            b.textContent = w.en + " (" + posLabel(w.pos) + ")";
+            li.appendChild(b);
+            li.appendChild(document.createTextNode(" — " + w.ru));
+          } else {
+            li.textContent = parseWordId(id).en;
+          }
+        });
+      });
+    }
+    if (entry.pv) {
+      chain = chain.then(function () {
+        return appendDayBlock(day, "Фразовые глаголы", entry.pv, true, getPvWord, function (li, w, id) {
+          if (w) {
+            var b = document.createElement("b");
+            b.textContent = w.pv;
+            li.appendChild(b);
+            li.appendChild(document.createTextNode(" — " + w.ru));
+          } else {
+            li.textContent = id;
+          }
+        });
+      });
+    }
+    return chain.then(function () { list.appendChild(day); });
+  }
+
+  // блок внутри записи дня: подзаголовок, итоги и список выученного
+  function appendDayBlock(day, title, s, isPv, fetchWord, renderLi) {
+    var t = document.createElement("h3");
+    t.className = "history-block-title" + (isPv ? " history-block-title-pv" : "");
+    t.textContent = title;
+    day.appendChild(t);
 
     var stats = document.createElement("p");
     stats.className = "history-day-stats";
@@ -915,22 +949,14 @@
     var ul = document.createElement("ul");
     ul.className = "history-words";
     return (s.daySet || []).reduce(function (chain, id) {
-      return chain.then(function () { return getWord(id); }).then(function (w) {
+      return chain.then(function () { return fetchWord(id); }).then(function (w) {
         var li = document.createElement("li");
         li.className = "history-word";
-        if (w) {
-          var b = document.createElement("b");
-          b.textContent = w.en + " (" + posLabel(w.pos) + ")";
-          li.appendChild(b);
-          li.appendChild(document.createTextNode(" — " + w.ru));
-        } else {
-          li.textContent = parseWordId(id).en;
-        }
+        renderLi(li, w, id);
         ul.appendChild(li);
       });
     }, Promise.resolve()).then(function () {
       day.appendChild(ul);
-      list.appendChild(day);
     });
   }
 
@@ -955,57 +981,6 @@
   function historyBack() {
     if (historyReturnTo === "pv") return enterPvMode();
     return restoreWordsScreen();
-  }
-
-  // ============================================================
-  // История прошедших дней: фразовые глаголы
-  // ============================================================
-
-  function buildPvHistoryDay(list, s) {
-    var day = document.createElement("article");
-    day.className = "history-day";
-
-    var head = document.createElement("div");
-    head.className = "history-day-head";
-
-    var date = document.createElement("h2");
-    date.className = "history-day-date";
-    date.textContent = formatDateRu(String(s.date).slice(3)); // ключ "pv:<дата>"
-
-    var chip = document.createElement("span");
-    chip.className = "pos-chip history-level history-chip-pv";
-    chip.textContent = "фразовые глаголы";
-
-    head.appendChild(date);
-    head.appendChild(chip);
-    day.appendChild(head);
-
-    var stats = document.createElement("p");
-    stats.className = "history-day-stats";
-    stats.textContent = "выучено: " + (s.statToday || 0) +
-      " · знали сразу: " + (s.knownCount || 0);
-    day.appendChild(stats);
-
-    var ul = document.createElement("ul");
-    ul.className = "history-words";
-    return (s.daySet || []).reduce(function (chain, id) {
-      return chain.then(function () { return getPvWord(id); }).then(function (w) {
-        var li = document.createElement("li");
-        li.className = "history-word";
-        if (w) {
-          var b = document.createElement("b");
-          b.textContent = w.pv;
-          li.appendChild(b);
-          li.appendChild(document.createTextNode(" — " + w.ru));
-        } else {
-          li.textContent = id;
-        }
-        ul.appendChild(li);
-      });
-    }, Promise.resolve()).then(function () {
-      day.appendChild(ul);
-      list.appendChild(day);
-    });
   }
 
   // ============================================================
@@ -1361,7 +1336,7 @@
     $("flip-card"), $("btn-known-card"), $("btn-repeat"),
     $("btn-check-yes"), $("btn-check-no"),
     $("btn-history-done"), $("btn-history-back"),
-    // фазовые глаголы
+    // фразовые глаголы
     $("btn-pv-entry"), $("btn-pv-entry-done"), $("btn-pv-entry-congrats"),
     $("btn-pv-know"), $("btn-pv-dont-know"),
     $("btn-pv-flip"), $("btn-pv-known-card"), $("btn-pv-repeat"),
@@ -1383,7 +1358,7 @@
   }));
   $("btn-history-back").addEventListener("click", lock(historyBack));
 
-  // фазовые глаголы: вход в режим и собственный поток сортировка→карточки→проверка
+  // фразовые глаголы: вход в режим и собственный поток сортировка→карточки→проверка
   $("btn-pv-entry").addEventListener("click", lock(enterPvMode));
   $("btn-pv-entry-done").addEventListener("click", lock(enterPvMode));
   $("btn-pv-entry-congrats").addEventListener("click", lock(enterPvMode));

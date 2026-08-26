@@ -519,7 +519,7 @@ body {
 .done-actions { margin-top: 22px; }
 .btn-row-solo { grid-template-columns: 1fr; }
 
-/* ---------- режим фазовых глаголов ---------- */
+/* ---------- режим фразовых глаголов ---------- */
 
 /* акцент режима — киноварь (основные слова: сосна/индиго/золото) */
 .eyebrow-pv { color: var(--vermilion); }
@@ -586,21 +586,16 @@ body {
 
 .pv-example-ru { opacity: .62; }
 
-/* секции экрана истории: слова и фазовые глаголы */
-.history-section-title {
-  margin: 26px 0 6px;
+/* подзаголовки блоков внутри записи дня истории («Слова» / глаголы) */
+.history-block-title {
+  margin: 16px 0 4px;
   font-family: var(--serif);
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: .3px;
 }
 
-.history-section-pv { color: var(--vermilion-deep); }
-
-.history-chip-pv {
-  color: var(--vermilion);
-  border-color: var(--vermilion);
-}
+.history-block-title-pv { color: var(--vermilion-deep); }
 
 /* ---------- десктоп ---------- */
 @media (min-width: 720px) {
