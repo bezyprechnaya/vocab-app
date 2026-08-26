@@ -434,6 +434,10 @@ body {
   background: repeating-linear-gradient(-45deg, var(--indigo), var(--indigo) 8px, var(--indigo-deep) 8px, var(--indigo-deep) 16px);
 }
 
+.bar-fill-c1 {
+  background: repeating-linear-gradient(-45deg, var(--gold), var(--gold) 8px, #a37c20 8px, #a37c20 16px);
+}
+
 /* ---------- история прошедших дней ---------- */
 .eyebrow-history { color: var(--gold); }
 

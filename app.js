@@ -13,7 +13,8 @@
 
   var LISTS = [
     { id: "b1", label: "B1", words: window.WORDS_B1 || [] },
-    { id: "b2", label: "B2", words: window.WORDS_B2 || [] }
+    { id: "b2", label: "B2", words: window.WORDS_B2 || [] },
+    { id: "c1", label: "C1", words: window.WORDS_C1 || [] }
   ];
 
   var POS_LABELS = {
@@ -176,31 +177,41 @@
     });
   }
 
-  // первичное наполнение базы из words-b1.js / words-b2.js
+  // Наполнение базы при каждом запуске: ДОБАВЛЯЕМ отсутствующие слова
+  // из всех трёх списков со статусом 'new', существующие записи и их
+  // статусы не трогаем. Так у пользователей со старой базой появляются
+  // слова нового уровня без сброса прогресса. Схему и версию БД не меняем.
   function seedIfNeeded() {
+    var listTotal = LISTS.reduce(function (sum, l) { return sum + l.words.length; }, 0);
+    if (listTotal === 0) {
+      // пустые данные ≠ «всё пройдено»: файлы слов не загрузились
+      throw new Error("Списки слов пусты — файлы words-b1.js / words-b2.js / words-c1.js не загрузились");
+    }
     return ensureDB().then(function (d) {
-      return idbReq(d.transaction("words", "readonly").objectStore("words").count()).then(function (n) {
-        if (n > 0) return;
-        var listTotal = LISTS[0].words.length + LISTS[1].words.length;
-        if (listTotal === 0) {
-          // пустые данные ≠ «всё пройдено»: файлы слов не загрузились
-          throw new Error("Списки слов пусты — файлы words-b1.js / words-b2.js не загрузились");
-        }
-        var tx = d.transaction("words", "readwrite");
-        var store = tx.objectStore("words");
+      return idbReq(d.transaction("words", "readonly").objectStore("words").getAllKeys()).then(function (keys) {
+        var existing = {};
+        keys.forEach(function (k) { existing[k] = 1; });
+        var missing = [];
         LISTS.forEach(function (list) {
           list.words.forEach(function (w) {
-            store.put({
-              id: wordId(w[0], w[1]),
-              en: w[0],
-              pos: w[1],
-              ru: w[2],
-              level: list.id,
-              status: "new",
-              firstShown: null,
-              learnedAt: null,
-              reviews: 0
-            });
+            var id = wordId(w[0], w[1]);
+            if (!existing[id]) missing.push({ w: w, level: list.id, id: id });
+          });
+        });
+        if (!missing.length) return;
+        var tx = d.transaction("words", "readwrite");
+        var store = tx.objectStore("words");
+        missing.forEach(function (m) {
+          store.put({
+            id: m.id,
+            en: m.w[0],
+            pos: m.w[1],
+            ru: m.w[2],
+            level: m.level,
+            status: "new",
+            firstShown: null,
+            learnedAt: null,
+            reviews: 0
           });
         });
         return new Promise(function (resolve, reject) {
@@ -285,9 +296,15 @@
   // Шапка
   // ============================================================
 
+  function levelLabel(id) {
+    var label = null;
+    LISTS.forEach(function (l) { if (l.id === id) label = l.label; });
+    return label;
+  }
+
   function currentLevelLabel() {
-    if (session) return session.level === "b1" ? "B1" : "B2";
-    return "B1";
+    if (session) return levelLabel(session.level) || LISTS[0].label;
+    return LISTS[0].label;
   }
 
   function updateTopbar() {
@@ -342,12 +359,18 @@
     // затем остатки 'learning' возвращаем в пул
     return purgeStaleSessions()
       .then(resetLeftoverLearning)
-      .then(function () { return countLevelStatus("b1", "new"); })
-      .then(function (b1New) {
-        if (b1New > 0) return "b1";
-        return countLevelStatus("b2", "new").then(function (b2New) {
-          return b2New > 0 ? "b2" : null;
-        });
+      .then(function () {
+        // цепочка уровней (сейчас B1 → B2 → C1): берём первый уровень,
+        // на котором ещё остались слова со статусом 'new'; логика
+        // обобщена на любое число списков в LISTS
+        return LISTS.reduce(function (chain, list) {
+          return chain.then(function (found) {
+            if (found) return found;
+            return countLevelStatus(list.id, "new").then(function (n) {
+              return n > 0 ? list.id : null;
+            });
+          });
+        }, Promise.resolve(null));
       })
       .then(function (level) {
         if (!level) return showCongrats();
@@ -624,34 +647,40 @@
     $("stat-today").textContent = session.statToday;
     $("stat-known").textContent = session.knownCount;
 
-    return Promise.all([
-      countLevelStatus("b1", "learned"),
-      countLevelStatus("b2", "learned"),
-      countLevelStatus("b1", "new"),
-      countLevelStatus("b2", "new")
-    ]).then(function (c) {
-      var b1Learned = c[0], b2Learned = c[1], b1New = c[2], b2New = c[3];
-      $("stat-total").textContent = b1Learned + b2Learned;
-      $("stat-level").textContent = b1New > 0 ? "B1" : "B2";
+    // статистика по каждому уровню (обобщено на любое число списков)
+    return Promise.all(LISTS.map(function (l) {
+      return Promise.all([
+        countLevelStatus(l.id, "learned"),
+        countLevelStatus(l.id, "new")
+      ]);
+    })).then(function (counts) {
+      var totalLearned = 0;
+      var activeLevel = null;
+      counts.forEach(function (c, i) {
+        totalLearned += c[0];
+        if (!activeLevel && c[1] > 0) activeLevel = LISTS[i].label;
+      });
+      $("stat-total").textContent = totalLearned;
+      $("stat-level").textContent = activeLevel || LISTS[LISTS.length - 1].label;
 
-      var b1Total = LISTS[0].words.length;
-      var b2Total = LISTS[1].words.length;
-      $("lp1-nums").textContent = b1Learned + " / " + b1Total;
-      $("lp2-nums").textContent = b2Learned + " / " + b2Total;
-      requestAnimationFrame(function () {
-        $("lp1-bar").style.width = (b1Total ? Math.round(b1Learned / b1Total * 100) : 100) + "%";
-        $("lp2-bar").style.width = (b2Total ? Math.round(b2Learned / b2Total * 100) : 100) + "%";
+      counts.forEach(function (c, i) {
+        var learned = c[0];
+        var total = LISTS[i].words.length;
+        $("lp" + (i + 1) + "-nums").textContent = learned + " / " + total;
+        var bar = $("lp" + (i + 1) + "-bar");
+        requestAnimationFrame(function () {
+          bar.style.width = (total ? Math.round(learned / total * 100) : 100) + "%";
+        });
       });
     });
   }
 
   function showCongrats() {
     showScreen("screen-congrats");
-    return Promise.all([
-      countLevelStatus("b1", "learned"),
-      countLevelStatus("b2", "learned")
-    ]).then(function (c) {
-      $("stat-total-final").textContent = c[0] + c[1];
+    return Promise.all(LISTS.map(function (l) {
+      return countLevelStatus(l.id, "learned");
+    })).then(function (counts) {
+      $("stat-total-final").textContent = counts.reduce(function (sum, n) { return sum + n; }, 0);
     });
   }
 
@@ -697,7 +726,7 @@
 
     var level = document.createElement("span");
     level.className = "pos-chip history-level";
-    level.textContent = s.level === "b2" ? "B2" : "B1";
+    level.textContent = levelLabel(s.level) || s.level;
 
     head.appendChild(date);
     head.appendChild(level);
