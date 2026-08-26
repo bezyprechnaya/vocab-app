@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Словарь дня — английские слова каждый день</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="paper-noise" aria-hidden="true"></div>
+
+<main id="app" class="app">
+  <!-- Шапка -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">✳</span>
+      <span class="brand-name">Словарь дня</span>
+    </div>
+    <div class="topbar-right">
+      <span id="streak-badge" class="level-badge">B1</span>
+      <span id="learned-badge" class="learned-badge" title="Всего выучено">0</span>
+    </div>
+  </header>
+
+  <!-- Экран: загрузка -->
+  <section id="screen-loading" class="screen">
+    <p class="lead loading-note" id="loading-text">Загрузка…</p>
+  </section>
+
+  <!-- Экран: сортировка новых слов -->
+  <section id="screen-sort" class="screen" hidden>
+    <p class="eyebrow">Новые слова · <span id="sort-date"></span></p>
+    <h1 class="headline">Знаете ли вы это слово?</h1>
+    <p class="progress-line">К изучению сегодня: <b id="sort-count">0</b></p>
+
+    <div class="word-stage">
+      <div id="sort-card" class="word-card">
+        <span id="sort-pos" class="pos-chip">сущ.</span>
+        <span id="sort-word" class="big-word">…</span>
+        <span class="card-foot">нажмите кнопку ниже</span>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button id="btn-dont-know" class="btn btn-dont">Не знаю это слово</button>
+      <button id="btn-know" class="btn btn-know">Знаю это слово</button>
+    </div>
+  </section>
+
+  <!-- Экран: карточки -->
+  <section id="screen-cards" class="screen" hidden>
+    <p class="eyebrow">Заучивание · <span id="cards-date"></span></p>
+    <h1 class="headline">Карточки дня</h1>
+    <div class="dots" id="cards-dots" aria-label="прогресс карточек"></div>
+
+    <div class="flip-scene">
+      <button id="flip-card" class="flip-card" aria-label="показать перевод">
+        <div class="flip-inner" id="flip-inner">
+          <div class="flip-face flip-front">
+            <span id="card-pos" class="pos-chip">сущ.</span>
+            <span id="card-word" class="big-word">…</span>
+            <span class="card-foot">нажмите, чтобы увидеть перевод</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span id="card-word-back" class="small-word">…</span>
+            <span id="card-ru" class="ru-word">…</span>
+          </div>
+        </div>
+      </button>
+    </div>
+
+    <div class="btn-row" id="card-actions" hidden>
+      <button id="btn-repeat" class="btn btn-dont">Повторить ещё</button>
+      <button id="btn-known-card" class="btn btn-know">Знаю</button>
+    </div>
+  </section>
+
+  <!-- Экран: финальная проверка -->
+  <section id="screen-check" class="screen" hidden>
+    <p class="eyebrow eyebrow-check">Проверка · <span id="check-date"></span></p>
+    <h1 class="headline">Помнишь перевод?</h1>
+    <p class="progress-line">Слово <b id="check-count">1</b> из <span id="check-total">10</span></p>
+
+    <div class="word-stage">
+      <div id="check-card" class="word-card check-card">
+        <span id="check-pos" class="pos-chip pos-chip-check">сущ.</span>
+        <span id="check-word" class="big-word">…</span>
+        <span class="card-foot">перевод скрыт — вспомни его сам</span>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button id="btn-check-no" class="btn btn-dont">Нет</button>
+      <button id="btn-check-yes" class="btn btn-know">Да</button>
+    </div>
+  </section>
+
+  <!-- Экран: готово на сегодня -->
+  <section id="screen-done" class="screen" hidden>
+    <div class="done-seal">✓</div>
+    <p class="eyebrow" id="done-date"></p>
+    <h1 class="headline" id="done-title">На сегодня всё сделано!</h1>
+    <p class="lead" id="done-lead">Отличная работа. Возвращайтесь завтра — новые слова появятся после полуночи.</p>
+
+    <div class="stat-grid">
+      <div class="stat">
+        <span class="stat-num" id="stat-today">10</span>
+        <span class="stat-label">выучено сегодня</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="stat-known">0</span>
+        <span class="stat-label">уже знали</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="stat-total">0</span>
+        <span class="stat-label">выучено всего</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="stat-level">B1</span>
+        <span class="stat-label">текущий уровень</span>
+      </div>
+    </div>
+
+    <div class="lp-stack">
+      <div class="list-progress">
+        <div class="list-progress-head">
+          <span>Список B1</span>
+          <span id="lp1-nums">0 / 0</span>
+        </div>
+        <div class="bar"><div class="bar-fill" id="lp1-bar"></div></div>
+      </div>
+      <div class="list-progress">
+        <div class="list-progress-head">
+          <span>Список B2</span>
+          <span id="lp2-nums">0 / 0</span>
+        </div>
+        <div class="bar"><div class="bar-fill bar-fill-b2" id="lp2-bar"></div></div>
+      </div>
+    </div>
+
+    <div class="done-actions">
+      <button id="btn-history-done" class="btn btn-ghost">Посмотреть историю</button>
+    </div>
+  </section>
+
+  <!-- Экран: история прошедших дней -->
+  <section id="screen-history" class="screen" hidden>
+    <p class="eyebrow eyebrow-history">История занятий</p>
+    <h1 class="headline">Прошлые дни</h1>
+    <p class="progress-line">Завершённых дней: <b id="history-total">0</b></p>
+
+    <div id="history-list" class="history-list"></div>
+
+    <div class="btn-row btn-row-solo">
+      <button id="btn-history-back" class="btn btn-ghost">← Назад</button>
+    </div>
+  </section>
+
+  <!-- Экран: оба списка пройдены -->
+  <section id="screen-congrats" class="screen" hidden>
+    <div class="done-seal seal-gold">★</div>
+    <h1 class="headline">Поздравляем!</h1>
+    <p class="lead">Вы прошли оба списка — B1 и B2 полностью исчерпаны. Это выдающийся результат.</p>
+    <div class="stat-grid">
+      <div class="stat">
+        <span class="stat-num" id="stat-total-final">0</span>
+        <span class="stat-label">слов выучено</span>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</main>
+
+<script src="words-b1.js"></script>
+<script src="words-b2.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

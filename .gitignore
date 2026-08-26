@@ -1,0 +1,27 @@
+# OS service files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# End-to-end test screenshots
+e2e-*.png
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.swp
+*.swo
+*~
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python caches
+__pycache__/
+*.pyc
