@@ -8,14 +8,20 @@
   "use strict";
 
   var WORDS_PER_DAY = 10;
+  var PV_PER_DAY = 5;
   var DB_NAME = "vocab_app_db";
-  var DB_VERSION = 1;
+  // v2: добавлен отдельный стор 'pvwords' для фразовых глаголов;
+  // существующие сторы 'words' и 'sessions' не меняются, данные сохраняются
+  var DB_VERSION = 2;
 
   var LISTS = [
     { id: "b1", label: "B1", words: window.WORDS_B1 || [] },
     { id: "b2", label: "B2", words: window.WORDS_B2 || [] },
     { id: "c1", label: "C1", words: window.WORDS_C1 || [] }
   ];
+
+  // Фразовые глаголы: [глагол, значение (рус.), пример (англ.), пример (рус.)]
+  var PV_LIST = window.PHRASAL_VERBS || [];
 
   var POS_LABELS = {
     n: "сущ.", v: "гл.", adj: "прил.", adv: "нар.",
@@ -25,8 +31,10 @@
 
   var db = null;          // IndexedDB
   var session = null;     // сессия текущего дня (из базы)
+  var pvSession = null;   // отдельная сессия фразовых глаголов (ключ "pv:" + дата)
   var today = todayString();
   var busy = true;        // защита от двойных кликов (сначала — пока идёт загрузка)
+  var historyReturnTo = "words"; // куда возвращаться с экрана истории
 
   // ============================================================
   // Утилиты
@@ -63,6 +71,15 @@
     var i = id.indexOf("|");
     return { en: id.slice(0, i), pos: id.slice(i + 1) };
   }
+
+  // id записи фразового глагола — индекс в PHRASAL_VERBS с префиксом,
+  // чтобы не пересекаться с id слов
+  function pvId(index) { return "pv:" + index; }
+
+  function parsePvId(id) { return Number(id.slice(3)); }
+
+  // ключ сессии фразовых глаголов — отдельный от сессии слов
+  function pvKey(date) { return "pv:" + date; }
 
   function shuffle(arr) {
     var a = arr.slice();
@@ -107,6 +124,12 @@
         }
         if (!d.objectStoreNames.contains("sessions")) {
           d.createObjectStore("sessions", { keyPath: "date" });
+        }
+        // v2: стор фразовых глаголов — создаём только при отсутствии,
+        // существующие данные не трогаем
+        if (!d.objectStoreNames.contains("pvwords")) {
+          var ps = d.createObjectStore("pvwords", { keyPath: "id" });
+          ps.createIndex("status", "status");
         }
       };
       req.onsuccess = function () {
@@ -177,6 +200,80 @@
     });
   }
 
+  // -------- Фразовые глаголы: доступ к стору 'pvwords' --------
+
+  function getPvWord(id) {
+    return ensureDB().then(function (d) {
+      return idbReq(d.transaction("pvwords", "readonly").objectStore("pvwords").get(id));
+    });
+  }
+  function putPvWord(w) {
+    return ensureDB().then(function (d) {
+      return idbReq(d.transaction("pvwords", "readwrite").objectStore("pvwords").put(w));
+    });
+  }
+  function countPvStatus(status) {
+    return ensureDB().then(function (d) {
+      return idbReq(d.transaction("pvwords", "readonly").objectStore("pvwords").index("status").count(status));
+    });
+  }
+  function getPvWordsByStatus(status) {
+    return ensureDB().then(function (d) {
+      return idbReq(d.transaction("pvwords", "readonly").objectStore("pvwords").index("status").getAll(status));
+    });
+  }
+
+  // Наполнение стора фразовых глаголов при каждом запуске: добавляем
+  // отсутствующие записи со статусом 'new', существующие не трогаем.
+  // Пустой список не считается ошибкой — режим просто не отображается.
+  function seedPvIfNeeded() {
+    if (!PV_LIST.length) return Promise.resolve();
+    return ensureDB().then(function (d) {
+      return idbReq(d.transaction("pvwords", "readonly").objectStore("pvwords").getAllKeys()).then(function (keys) {
+        var existing = {};
+        keys.forEach(function (k) { existing[k] = 1; });
+        var missing = [];
+        PV_LIST.forEach(function (row, i) {
+          var id = pvId(i);
+          if (!existing[id]) missing.push({ i: i, row: row, id: id });
+        });
+        if (!missing.length) return;
+        var tx = d.transaction("pvwords", "readwrite");
+        var store = tx.objectStore("pvwords");
+        missing.forEach(function (m) {
+          store.put({
+            id: m.id,
+            pv: m.row[0],
+            ru: m.row[1],
+            ex_en: m.row[2],
+            ex_ru: m.row[3],
+            status: "new",
+            firstShown: null,
+            learnedAt: null,
+            reviews: 0
+          });
+        });
+        return new Promise(function (resolve, reject) {
+          tx.oncomplete = resolve;
+          tx.onerror = function () { reject(tx.error); };
+        });
+      });
+    });
+  }
+
+  // остатки 'learning' фразовых глаголов от незавершённого дня
+  // возвращаем в пул 'new'
+  function resetPvLeftoverLearning() {
+    return getPvWordsByStatus("learning").then(function (list) {
+      return list.reduce(function (chain, w) {
+        return chain.then(function () {
+          w.status = "new";
+          return putPvWord(w);
+        });
+      }, Promise.resolve());
+    });
+  }
+
   // Наполнение базы при каждом запуске: ДОБАВЛЯЕМ отсутствующие слова
   // из всех трёх списков со статусом 'new', существующие записи и их
   // статусы не трогаем. Так у пользователей со старой базой появляются
@@ -236,11 +333,13 @@
   }
 
   // незавершённые сессии за ДРУГИЕ даты удаляем перед сбросом 'learning',
-  // чтобы слово не могло оказаться в двух активных сессиях одновременно
+  // чтобы слово не могло оказаться в двух активных сессиях одновременно.
+  // Ключи фразовых глаголов ("pv:<дата>") обрабатываются по тем же правилам:
+  // незавершённая вчерашняя сессия глаголов тоже считается устаревшей.
   function purgeStaleSessions() {
     return getAllSessions().then(function (all) {
       return all.reduce(function (chain, s) {
-        if (!s || s.date === today || s.phase === "done") return chain;
+        if (!s || s.date === today || s.date === pvKey(today) || s.phase === "done") return chain;
         return chain.then(function () { return deleteSession(s.date); });
       }, Promise.resolve());
     });
@@ -281,11 +380,42 @@
     });
   }
 
+  // та же сверка для сессии фразовых глаголов
+  function sanitizePvSession(saved) {
+    if (saved.phase === "done") return Promise.resolve(saved);
+    var fields = ["daySet", "sortQueue", "cardQueue", "checkQueue", "checkFailed", "checkTarget"];
+    var seen = {};
+    fields.forEach(function (k) {
+      (saved[k] || []).forEach(function (id) { seen[id] = 1; });
+    });
+    var learned = {};
+    return Object.keys(seen).reduce(function (chain, id) {
+      return chain.then(function () { return getPvWord(id); }).then(function (w) {
+        if (w && w.status === "learned") learned[id] = 1;
+      });
+    }, Promise.resolve()).then(function () {
+      if (!Object.keys(learned).length) return saved;
+      fields.forEach(function (k) {
+        saved[k] = (saved[k] || []).filter(function (id) { return !learned[id]; });
+      });
+      if (saved.phase === "cards") {
+        saved.cardsDoneCount = 0;
+        saved.cardRoundTotal = saved.cardQueue.length;
+        saved.checkTarget = saved.cardQueue.slice();
+      }
+      if (saved.phase === "check") {
+        saved.checkRoundTotal = saved.checkQueue.length;
+      }
+      saved.lastPresented = null;
+      return putSession(saved).then(function () { return saved; });
+    });
+  }
+
   // ============================================================
   // Экраны
   // ============================================================
 
-  var SCREENS = ["screen-loading", "screen-sort", "screen-cards", "screen-check", "screen-done", "screen-congrats", "screen-history"];
+  var SCREENS = ["screen-loading", "screen-sort", "screen-cards", "screen-check", "screen-done", "screen-congrats", "screen-history", "screen-pv-sort", "screen-pv-cards", "screen-pv-check", "screen-pv-done"];
 
   function showScreen(id) {
     SCREENS.forEach(function (s) { $(s).hidden = (s !== id); });
@@ -309,7 +439,7 @@
 
   function updateTopbar() {
     $("streak-badge").textContent = currentLevelLabel();
-    return refreshLearnedBadge();
+    return refreshLearnedBadge().then(updatePvEntryStatus);
   }
 
   // лёгкое обновление бейджа «выучено»: один подсчёт по индексу статуса.
@@ -323,6 +453,22 @@
     });
   }
 
+  // статус кнопок-карточек входа в режим фразовых глаголов
+  // («5 в день · выучено N из M» либо «сегодня выполнено · …»);
+  // основной бейдж слов не трогаем
+  function updatePvEntryStatus() {
+    if (!PV_LIST.length) return Promise.resolve();
+    return countPvStatus("learned").then(function (n) {
+      var base = "выучено " + n + " из " + PV_LIST.length;
+      var doneToday = pvSession && pvSession.phase === "done";
+      var text = doneToday ? "сегодня выполнено · " + base : PV_PER_DAY + " в день · " + base;
+      ["pv-entry-status", "pv-entry-done-status", "pv-entry-congrats-status"].forEach(function (id) {
+        var el = $(id);
+        if (el) el.textContent = text;
+      });
+    });
+  }
+
   // ============================================================
   // Загрузка и маршрутизация
   // ============================================================
@@ -330,6 +476,7 @@
   function boot() {
     return openDB()
       .then(seedIfNeeded)
+      .then(seedPvIfNeeded)
       .then(function () { return getSession(today); })
       .then(function (saved) {
         if (saved && saved.date === today) {
@@ -350,6 +497,15 @@
           });
         }
         return startNewDay();
+      })
+      // отдельная сессия фразовых глаголов: восстанавливаем её независимо
+      // от слов, но экран не переключаем — вход в режим только по кнопке
+      .then(function () { return getSession(pvKey(today)); })
+      .then(function (saved) {
+        if (saved && saved.date === pvKey(today)) {
+          return sanitizePvSession(saved).then(function (clean) { pvSession = clean; });
+        }
+        pvSession = null;
       })
       .then(updateTopbar);
   }
@@ -691,10 +847,16 @@
   function renderHistory() {
     showScreen("screen-history");
     var list = $("history-list");
+    var pvList = $("history-pv-list");
     while (list.firstChild) list.removeChild(list.firstChild);
+    while (pvList.firstChild) pvList.removeChild(pvList.firstChild);
     return getAllSessions().then(function (all) {
-      // показываем только завершённые дни, новые — сверху
-      var days = all.filter(function (s) { return s && s.phase === "done"; })
+      // показываем только завершённые дни, новые — сверху;
+      // сессии фразовых глаголов (ключ "pv:<дата>") — в своей секции
+      var isPv = function (s) { return String(s.date).slice(0, 3) === "pv:"; };
+      var days = all.filter(function (s) { return s && s.phase === "done" && !isPv(s); })
+        .sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+      var pvDays = all.filter(function (s) { return s && s.phase === "done" && isPv(s); })
         .sort(function (a, b) { return a.date < b.date ? 1 : -1; });
 
       if (!days.length) {
@@ -703,13 +865,25 @@
         empty.textContent =
           "Истории пока нет. Завершите первый день занятий — и здесь появится список выученных слов.";
         list.appendChild(empty);
-        return;
+      }
+
+      if (!pvDays.length) {
+        var emptyPv = document.createElement("p");
+        emptyPv.className = "lead history-empty";
+        emptyPv.textContent =
+          "Истории по фразовым глаголам пока нет. Завершите первый день в режиме фразовых глаголов.";
+        pvList.appendChild(emptyPv);
       }
 
       $("history-total").textContent = days.length;
+      $("history-pv-total").textContent = pvDays.length;
       return days.reduce(function (chain, s) {
         return chain.then(function () { return buildHistoryDay(list, s); });
-      }, Promise.resolve());
+      }, Promise.resolve()).then(function () {
+        return pvDays.reduce(function (chain, s) {
+          return chain.then(function () { return buildPvHistoryDay(pvList, s); });
+        }, Promise.resolve());
+      });
     });
   }
 
@@ -760,9 +934,9 @@
     });
   }
 
-  // возврат с истории — на текущий экран по фазе сессии
-  // (та же логика восстановления, что в boot())
-  function historyBack() {
+  // восстановление экрана основного потока слов по фазе сессии
+  // (используется в boot(), historyBack() и pvBackToWords())
+  function restoreWordsScreen() {
     if (!session || session.phase === "sort") return enterSort();
     if (session.phase === "cards") {
       showScreen("screen-cards");
@@ -775,6 +949,377 @@
       return presentCheck();
     }
     return showDone(false);
+  }
+
+  // возврат с истории — туда, откуда пришли (слова или фразовые глаголы)
+  function historyBack() {
+    if (historyReturnTo === "pv") return enterPvMode();
+    return restoreWordsScreen();
+  }
+
+  // ============================================================
+  // История прошедших дней: фразовые глаголы
+  // ============================================================
+
+  function buildPvHistoryDay(list, s) {
+    var day = document.createElement("article");
+    day.className = "history-day";
+
+    var head = document.createElement("div");
+    head.className = "history-day-head";
+
+    var date = document.createElement("h2");
+    date.className = "history-day-date";
+    date.textContent = formatDateRu(String(s.date).slice(3)); // ключ "pv:<дата>"
+
+    var chip = document.createElement("span");
+    chip.className = "pos-chip history-level history-chip-pv";
+    chip.textContent = "фразовые глаголы";
+
+    head.appendChild(date);
+    head.appendChild(chip);
+    day.appendChild(head);
+
+    var stats = document.createElement("p");
+    stats.className = "history-day-stats";
+    stats.textContent = "выучено: " + (s.statToday || 0) +
+      " · знали сразу: " + (s.knownCount || 0);
+    day.appendChild(stats);
+
+    var ul = document.createElement("ul");
+    ul.className = "history-words";
+    return (s.daySet || []).reduce(function (chain, id) {
+      return chain.then(function () { return getPvWord(id); }).then(function (w) {
+        var li = document.createElement("li");
+        li.className = "history-word";
+        if (w) {
+          var b = document.createElement("b");
+          b.textContent = w.pv;
+          li.appendChild(b);
+          li.appendChild(document.createTextNode(" — " + w.ru));
+        } else {
+          li.textContent = id;
+        }
+        ul.appendChild(li);
+      });
+    }, Promise.resolve()).then(function () {
+      day.appendChild(ul);
+      list.appendChild(day);
+    });
+  }
+
+  // ============================================================
+  // Отдельный режим: фразовые глаголы (5 в день)
+  // Сессия хранится отдельно от слов под ключом "pv:<дата>",
+  // поэтому оба режима можно проходить в один день независимо.
+  // ============================================================
+
+  function enterPvMode() {
+    if (!PV_LIST.length) {
+      toast("Файл phrasal-verbs.js не загрузился");
+      return Promise.resolve();
+    }
+    if (pvSession && pvSession.date === pvKey(today)) {
+      return routePvSession();
+    }
+    return startPvNewDay();
+  }
+
+  function routePvSession() {
+    if (pvSession.phase === "sort") return enterPvSort();
+    if (pvSession.phase === "cards") {
+      showScreen("screen-pv-cards");
+      $("pv-cards-date").textContent = formatDateRu(today);
+      return pvNextCard();
+    }
+    if (pvSession.phase === "check") {
+      showScreen("screen-pv-check");
+      $("pv-check-date").textContent = formatDateRu(today);
+      return pvPresentCheck();
+    }
+    return showPvDone(false); // phase === 'done'
+  }
+
+  function startPvNewDay() {
+    return purgeStaleSessions()
+      .then(resetPvLeftoverLearning)
+      .then(function () { return getPvWordsByStatus("new"); })
+      .then(function (pool) {
+        if (!pool.length) {
+          // новых глаголов не осталось — показываем итоговый экран
+          return showPvAllLearned();
+        }
+        var picked = shuffle(pool).slice(0, PV_PER_DAY).map(function (w) { return w.id; });
+        pvSession = {
+          date: pvKey(today),
+          daySet: picked.slice(),        // глаголы на изучение (уточняется при сортировке)
+          sortQueue: shuffle(picked),    // порядок сортировки — случайный
+          phase: "sort",
+          cardQueue: [],
+          cardRoundTotal: 0,
+          cardsDoneCount: 0,
+          checkQueue: [],
+          checkRoundTotal: 0,
+          checkFailed: [],
+          knownCount: 0,
+          statToday: 0,
+          lastPresented: null
+        };
+        return putSession(pvSession).then(enterPvSort);
+      });
+  }
+
+  // --- Фаза 1: сортировка глаголов ---
+
+  function enterPvSort() {
+    showScreen("screen-pv-sort");
+    $("pv-sort-date").textContent = formatDateRu(today);
+    return renderPvSortWord();
+  }
+
+  function renderPvSortWord() {
+    if (!pvSession.sortQueue.length) return afterPvSort();
+    var row = PV_LIST[parsePvId(pvSession.sortQueue[0])];
+    $("pv-sort-word").textContent = row ? row[0] : pvSession.sortQueue[0];
+    $("pv-sort-count").textContent = pvSession.daySet.length;
+
+    var card = $("pv-sort-card");
+    card.style.animation = "none";
+    void card.offsetWidth;
+    card.style.animation = "";
+    return Promise.resolve();
+  }
+
+  // добор до 5 незнакомых глаголов из пула 'new'
+  function refillPvSortQueue() {
+    if (pvSession.daySet.length >= PV_PER_DAY) return Promise.resolve();
+    return getPvWordsByStatus("new").then(function (pool) {
+      var candidates = pool.filter(function (w) {
+        return pvSession.daySet.indexOf(w.id) === -1 &&
+               pvSession.sortQueue.indexOf(w.id) === -1;
+      });
+      if (!candidates.length) return;
+      var pick = candidates[Math.floor(Math.random() * candidates.length)];
+      pvSession.daySet.push(pick.id);
+      pvSession.sortQueue.unshift(pick.id); // показать его следующим
+    });
+  }
+
+  function answerPvSort(know) {
+    var id = pvSession.sortQueue.shift();
+    return getPvWord(id).then(function (w) {
+      if (!w) throw new Error("фразовый глагол не найден в базе: " + id);
+      w.firstShown = w.firstShown || today;
+      w.reviews = (w.reviews || 0) + 1;
+      if (know) {
+        w.status = "learned";
+        w.learnedAt = today;
+        pvSession.knownCount++;
+        pvSession.daySet = pvSession.daySet.filter(function (x) { return x !== id; });
+      } else {
+        w.status = "learning";
+      }
+      return putPvWord(w);
+    }).then(function () {
+      var topUp = know ? refillPvSortQueue() : Promise.resolve();
+      return topUp.then(function () {
+        if (pvSession.sortQueue.length === 0) return afterPvSort();
+        return putSession(pvSession).then(renderPvSortWord);
+      });
+    }).then(updatePvEntryStatus);
+  }
+
+  function afterPvSort() {
+    if (pvSession.daySet.length === 0) {
+      // все глаголы дня оказались знакомыми
+      pvSession.phase = "done";
+      pvSession.statToday = pvSession.knownCount;
+      return putSession(pvSession).then(function () { return showPvDone(true); });
+    }
+    return startPvCards(shuffle(pvSession.daySet));
+  }
+
+  // --- Фаза 2: карточки ---
+
+  function startPvCards(ids) {
+    pvSession.phase = "cards";
+    pvSession.cardQueue = ids.slice();
+    pvSession.cardRoundTotal = ids.length;
+    pvSession.cardsDoneCount = 0;
+    pvSession.checkTarget = ids.slice(); // кого проверять после этого раунда
+    pvSession.lastPresented = null;      // новый раунд — первый показ считается заново
+    return putSession(pvSession).then(function () {
+      showScreen("screen-pv-cards");
+      $("pv-cards-date").textContent = formatDateRu(today);
+      return pvNextCard();
+    });
+  }
+
+  function renderPvDots() {
+    var dots = $("pv-cards-dots");
+    while (dots.firstChild) dots.removeChild(dots.firstChild);
+    var total = pvSession.cardRoundTotal;
+    var done = pvSession.cardsDoneCount;
+    for (var i = 0; i < total; i++) {
+      var d = document.createElement("span");
+      d.className = "dot" + (i < done ? " done" : (i === done ? " active" : ""));
+      dots.appendChild(d);
+    }
+  }
+
+  function pvNextCard() {
+    if (pvSession.cardQueue.length === 0) {
+      return startPvCheck(pvSession.checkTarget.slice());
+    }
+    var id = pvSession.cardQueue[0];
+    return getPvWord(id).then(function (w) {
+      if (!w) throw new Error("фразовый глагол не найден в базе: " + id);
+      // повторный показ той же карточки (перезагрузка посреди слова)
+      // не должен снова накручивать reviews
+      if (pvSession.lastPresented === id) return w;
+      w.reviews = (w.reviews || 0) + 1;
+      pvSession.lastPresented = id;
+      return Promise.all([putPvWord(w), putSession(pvSession)]).then(function () { return w; });
+    }).then(function (w) {
+      $("pv-flip-inner").classList.remove("flipped");
+      $("pv-card-actions").hidden = true;
+      $("pv-card-front").textContent = w.pv;
+      $("pv-card-back-title").textContent = w.pv;
+      $("pv-card-ru").textContent = w.ru;
+      $("pv-card-ex-en").textContent = w.ex_en;
+      $("pv-card-ex-ru").textContent = w.ex_ru;
+      renderPvDots();
+    });
+  }
+
+  function pvFlipCard() {
+    var flipped = $("pv-flip-inner").classList.toggle("flipped");
+    $("pv-card-actions").hidden = !flipped;
+    return Promise.resolve();
+  }
+
+  function pvCardKnown() {
+    pvSession.cardQueue.shift();
+    pvSession.cardsDoneCount++;
+    pvSession.lastPresented = null;
+    return putSession(pvSession).then(pvNextCard);
+  }
+
+  function pvCardRepeat() {
+    var id = pvSession.cardQueue.shift();
+    pvSession.cardQueue.push(id); // возвращаем в конец очереди
+    pvSession.lastPresented = null;
+    return putSession(pvSession).then(pvNextCard);
+  }
+
+  // --- Фаза 3: финальная проверка («Помнишь значение?») ---
+
+  function startPvCheck(ids) {
+    pvSession.phase = "check";
+    pvSession.checkQueue = ids.slice();
+    pvSession.checkRoundTotal = ids.length;
+    pvSession.checkFailed = [];
+    pvSession.lastPresented = null;
+    return putSession(pvSession).then(function () {
+      showScreen("screen-pv-check");
+      $("pv-check-date").textContent = formatDateRu(today);
+      return pvPresentCheck();
+    });
+  }
+
+  function pvPresentCheck() {
+    if (pvSession.checkQueue.length === 0) {
+      if (pvSession.checkFailed.length === 0) {
+        return pvFinalize(); // чистая проверка — день завершён
+      }
+      // проваленные глаголы возвращаются в карточки на доучивание
+      return startPvCards(shuffle(pvSession.checkFailed));
+    }
+    var id = pvSession.checkQueue[0];
+    var row = PV_LIST[parsePvId(id)];
+    var shown = pvSession.checkRoundTotal - pvSession.checkQueue.length + 1;
+    $("pv-check-word").textContent = row ? row[0] : id;
+    $("pv-check-count").textContent = shown;
+    $("pv-check-total").textContent = pvSession.checkRoundTotal;
+
+    var card = $("pv-check-card");
+    card.style.animation = "none";
+    void card.offsetWidth;
+    card.style.animation = "";
+
+    return getPvWord(id).then(function (w) {
+      if (!w) return;
+      // перезагрузка посреди того же глагола не накручивает reviews повторно
+      if (pvSession.lastPresented === id) return;
+      w.reviews = (w.reviews || 0) + 1;
+      pvSession.lastPresented = id;
+      return Promise.all([putPvWord(w), putSession(pvSession)]);
+    });
+  }
+
+  function answerPvCheck(yes) {
+    var id = pvSession.checkQueue.shift();
+    if (!yes) pvSession.checkFailed.push(id);
+    pvSession.lastPresented = null;
+    return putSession(pvSession).then(pvPresentCheck);
+  }
+
+  // --- Завершение дня фразовых глаголов ---
+
+  function pvFinalize() {
+    return pvSession.daySet.reduce(function (chain, id) {
+      return chain.then(function () { return getPvWord(id); }).then(function (w) {
+        if (!w) return;
+        w.status = "learned";
+        w.learnedAt = today;
+        return putPvWord(w);
+      });
+    }, Promise.resolve()).then(function () {
+      pvSession.phase = "done";
+      pvSession.statToday = pvSession.knownCount + pvSession.daySet.length;
+      return putSession(pvSession);
+    }).then(function () {
+      return showPvDone(true);
+    });
+  }
+
+  function fillPvDoneHeader(title, lead) {
+    $("pv-done-date").textContent = formatDateRu(today);
+    $("pv-done-title").textContent = title;
+    $("pv-done-lead").textContent = lead;
+    return countPvStatus("learned").then(function (n) {
+      $("pv-learned-count").textContent = n;
+      $("pv-learned-total").textContent = PV_LIST.length;
+      return updatePvEntryStatus();
+    });
+  }
+
+  function showPvDone(fresh) {
+    showScreen("screen-pv-done");
+    $("pv-stat-today").textContent = pvSession.statToday;
+    $("pv-stat-known").textContent = pvSession.knownCount;
+    return fillPvDoneHeader(
+      fresh ? "Фразовые глаголы: готово!" : "Фразовые глаголы на сегодня выполнены!",
+      fresh
+        ? "Отличная работа. Новые фразовые глаголы появятся после полуночи."
+        : "Сессия этого дня уже завершена. Новые фразовые глаголы появятся после полуночи."
+    );
+  }
+
+  function showPvAllLearned() {
+    showScreen("screen-pv-done");
+    $("pv-stat-today").textContent = 0;
+    $("pv-stat-known").textContent = 0;
+    return fillPvDoneHeader(
+      "Все фразовые глаголы выучены!",
+      "Новых глаголов не осталось — можно пересматривать историю занятий."
+    );
+  }
+
+  // возврат из режима глаголов в основной поток слов
+  // (та же логика восстановления, что в boot())
+  function pvBackToWords() {
+    return restoreWordsScreen();
   }
 
   // ============================================================
@@ -815,7 +1360,13 @@
     $("btn-know"), $("btn-dont-know"),
     $("flip-card"), $("btn-known-card"), $("btn-repeat"),
     $("btn-check-yes"), $("btn-check-no"),
-    $("btn-history-done"), $("btn-history-back")
+    $("btn-history-done"), $("btn-history-back"),
+    // фазовые глаголы
+    $("btn-pv-entry"), $("btn-pv-entry-done"), $("btn-pv-entry-congrats"),
+    $("btn-pv-know"), $("btn-pv-dont-know"),
+    $("btn-pv-flip"), $("btn-pv-known-card"), $("btn-pv-repeat"),
+    $("btn-pv-check-yes"), $("btn-pv-check-no"),
+    $("btn-pv-history"), $("btn-pv-back-words")
   ];
   setActionsDisabled(true);
 
@@ -826,8 +1377,28 @@
   $("btn-repeat").addEventListener("click", lock(cardRepeat));
   $("btn-check-yes").addEventListener("click", lock(function () { return answerCheck(true); }));
   $("btn-check-no").addEventListener("click", lock(function () { return answerCheck(false); }));
-  $("btn-history-done").addEventListener("click", lock(renderHistory));
+  $("btn-history-done").addEventListener("click", lock(function () {
+    historyReturnTo = "words";
+    return renderHistory();
+  }));
   $("btn-history-back").addEventListener("click", lock(historyBack));
+
+  // фазовые глаголы: вход в режим и собственный поток сортировка→карточки→проверка
+  $("btn-pv-entry").addEventListener("click", lock(enterPvMode));
+  $("btn-pv-entry-done").addEventListener("click", lock(enterPvMode));
+  $("btn-pv-entry-congrats").addEventListener("click", lock(enterPvMode));
+  $("btn-pv-know").addEventListener("click", lock(function () { return answerPvSort(true); }));
+  $("btn-pv-dont-know").addEventListener("click", lock(function () { return answerPvSort(false); }));
+  $("btn-pv-flip").addEventListener("click", lock(pvFlipCard));
+  $("btn-pv-known-card").addEventListener("click", lock(pvCardKnown));
+  $("btn-pv-repeat").addEventListener("click", lock(pvCardRepeat));
+  $("btn-pv-check-yes").addEventListener("click", lock(function () { return answerPvCheck(true); }));
+  $("btn-pv-check-no").addEventListener("click", lock(function () { return answerPvCheck(false); }));
+  $("btn-pv-history").addEventListener("click", lock(function () {
+    historyReturnTo = "pv";
+    return renderHistory();
+  }));
+  $("btn-pv-back-words").addEventListener("click", lock(pvBackToWords));
 
   boot()
     .then(function () {

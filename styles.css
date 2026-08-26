@@ -519,6 +519,89 @@ body {
 .done-actions { margin-top: 22px; }
 .btn-row-solo { grid-template-columns: 1fr; }
 
+/* ---------- режим фазовых глаголов ---------- */
+
+/* акцент режима — киноварь (основные слова: сосна/индиго/золото) */
+.eyebrow-pv { color: var(--vermilion); }
+
+.pos-chip-pv { color: var(--vermilion); border-color: var(--vermilion); }
+
+.pv-card-tint::before, .pv-card-tint::after { border-color: var(--vermilion); }
+
+.seal-pv {
+  border-color: var(--vermilion);
+  color: var(--vermilion);
+  background: rgba(209, 70, 47, .08);
+}
+
+/* карточка-кнопка входа в режим на экранах сортировки/готово/поздравления */
+.pv-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 26px;
+  padding: 16px 18px;
+  text-align: left;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 6px 6px 0 rgba(209, 70, 47, .25);
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.pv-entry:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 rgba(209, 70, 47, .25);
+}
+.pv-entry:disabled { opacity: .55; cursor: default; }
+
+.pv-entry-head {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--vermilion-deep);
+}
+
+.pv-entry-status {
+  font-size: 13.5px;
+  letter-spacing: .3px;
+  color: var(--ink-soft);
+}
+
+/* оборот карточки глагола: значение + два примера */
+.flip-back-pv { overflow-y: auto; }
+
+.pv-example {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--serif);
+  font-size: 15px;
+  font-style: italic;
+  line-height: 1.35;
+  opacity: .9;
+}
+
+.pv-example-ru { opacity: .62; }
+
+/* секции экрана истории: слова и фазовые глаголы */
+.history-section-title {
+  margin: 26px 0 6px;
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: .3px;
+}
+
+.history-section-pv { color: var(--vermilion-deep); }
+
+.history-chip-pv {
+  color: var(--vermilion);
+  border-color: var(--vermilion);
+}
+
 /* ---------- десктоп ---------- */
 @media (min-width: 720px) {
   .app { max-width: 520px; }
