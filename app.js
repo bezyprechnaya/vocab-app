@@ -35,6 +35,12 @@
   var today = todayString();
   var busy = true;        // защита от двойных кликов (сначала — пока идёт загрузка)
   var historyReturnTo = "words"; // куда возвращаться с экрана истории
+  // повторение из истории — только в памяти, ничего не пишет в базу;
+  // после перезагрузки страницы состояние просто теряется
+  var reviewQueue = [];  // готовые записи слов/глаголов для карточек
+  var reviewTotal = 0;   // сколько карточек было в наборе (для итогового экрана)
+  var reviewType = "words"; // "words" | "pv"
+  var reviewDate = "";   // дата повторяемого дня
 
   // ============================================================
   // Утилиты
@@ -913,7 +919,7 @@
           } else {
             li.textContent = parseWordId(id).en;
           }
-        });
+        }, entry);
       });
     }
     if (entry.pv) {
@@ -927,14 +933,14 @@
           } else {
             li.textContent = id;
           }
-        });
+        }, entry);
       });
     }
     return chain.then(function () { list.appendChild(day); });
   }
 
-  // блок внутри записи дня: подзаголовок, итоги и список выученного
-  function appendDayBlock(day, title, s, isPv, fetchWord, renderLi) {
+  // блок внутри записи дня: подзаголовок, итоги, список выученного и кнопка повторения
+  function appendDayBlock(day, title, s, isPv, fetchWord, renderLi, entry) {
     var t = document.createElement("h3");
     t.className = "history-block-title" + (isPv ? " history-block-title-pv" : "");
     t.textContent = title;
@@ -957,6 +963,17 @@
       });
     }, Promise.resolve()).then(function () {
       day.appendChild(ul);
+      var row = document.createElement("div");
+      row.className = "history-review-row";
+      var btn = document.createElement("button");
+      btn.className = "btn btn-ghost history-review-btn" + (isPv ? " history-review-btn-pv" : "");
+      btn.type = "button";
+      btn.textContent = "Повторить";
+      btn.addEventListener("click", lock(function () {
+        return startReview(isPv ? "pv" : "words", entry);
+      }));
+      row.appendChild(btn);
+      day.appendChild(row);
     });
   }
 
@@ -981,6 +998,108 @@
   function historyBack() {
     if (historyReturnTo === "pv") return enterPvMode();
     return restoreWordsScreen();
+  }
+
+  // ============================================================
+  // Повторение выученного из истории (по карточкам)
+  // Чисто тренировка: очередь живёт только в памяти, база данных,
+  // сессии и счётчики прогресса не изменяются.
+  // ============================================================
+
+  function startReview(type, entry) {
+    var s = type === "pv" ? entry.pv : entry.words;
+    var fetchWord = type === "pv" ? getPvWord : getWord;
+    reviewType = type;
+    reviewDate = entry.date;
+    reviewQueue = [];
+    return (s.daySet || []).reduce(function (chain, id) {
+      return chain.then(function () { return fetchWord(id); }).then(function (w) {
+        // если записи уже нет в базе — просто пропускаем её
+        if (w) reviewQueue.push(w);
+      });
+    }, Promise.resolve()).then(function () {
+      reviewTotal = reviewQueue.length;
+      if (!reviewQueue.length) {
+        toast("Для этого дня нечего повторять");
+        return;
+      }
+      $("review-headline").textContent =
+        type === "pv" ? "Повторение глаголов" : "Повторение слов";
+      var screen = $("screen-review");
+      if (type === "pv") {
+        screen.classList.add("review-pv");
+        $("review-eyebrow").classList.add("eyebrow-pv");
+        $("review-back-face").classList.add("flip-back-pv");
+      } else {
+        screen.classList.remove("review-pv");
+        $("review-eyebrow").classList.remove("eyebrow-pv");
+        $("review-back-face").classList.remove("flip-back-pv");
+      }
+      showReviewCard();
+    });
+  }
+
+  function showReviewCard() {
+    showScreen("screen-review");
+    $("review-eyebrow").textContent =
+      (reviewType === "pv" ? "Повторение глаголов · " : "Повторение слов · ") +
+      formatDateRu(reviewDate);
+    $("review-progress").textContent = reviewQueue.length;
+    $("review-done").hidden = true;
+    $("review-flow").hidden = false;
+    $("review-actions").hidden = true;
+    renderReviewCard();
+    return Promise.resolve();
+  }
+
+  function renderReviewCard() {
+    var inner = $("review-flip-inner");
+    inner.classList.remove("flipped");
+    var w = reviewQueue[0];
+    var isPv = reviewType === "pv";
+    $("review-ex-en").hidden = !isPv;
+    $("review-ex-ru").hidden = !isPv;
+    if (isPv) {
+      $("review-pos").textContent = "глагол";
+      $("review-card-front").textContent = w.pv;
+      $("review-back-title").textContent = w.pv;
+      $("review-card-ru").textContent = w.ru;
+      $("review-ex-en").textContent = w.ex_en;
+      $("review-ex-ru").textContent = w.ex_ru;
+    } else {
+      $("review-pos").textContent = posLabel(w.pos);
+      $("review-card-front").textContent = w.en;
+      $("review-back-title").textContent = w.en;
+      $("review-card-ru").textContent = w.ru;
+    }
+  }
+
+  function reviewFlipCard() {
+    if (!reviewQueue.length) return Promise.resolve();
+    $("review-flip-inner").classList.add("flipped");
+    $("review-actions").hidden = false;
+    return Promise.resolve();
+  }
+
+  // «Знаю» — карточка уходит из очереди; «Повторить ещё» — в конец очереди.
+  // Ни одна из кнопок ничего не пишет в базу.
+  function reviewAnswer(known) {
+    if (!reviewQueue.length) return Promise.resolve();
+    if (!known) reviewQueue.push(reviewQueue[0]);
+    reviewQueue.shift();
+    if (!reviewQueue.length) return finishReview();
+    renderReviewCard();
+    $("review-actions").hidden = true;
+    return Promise.resolve();
+  }
+
+  function finishReview() {
+    $("review-flow").hidden = true;
+    var noun = reviewType === "pv" ? "глаголов" : "слов";
+    $("review-done-note").textContent =
+      "Повторение завершено: повторено " + reviewTotal + " " + noun;
+    $("review-done").hidden = false;
+    return Promise.resolve();
   }
 
   // ============================================================
@@ -1341,7 +1460,9 @@
     $("btn-pv-know"), $("btn-pv-dont-know"),
     $("btn-pv-flip"), $("btn-pv-known-card"), $("btn-pv-repeat"),
     $("btn-pv-check-yes"), $("btn-pv-check-no"),
-    $("btn-pv-history"), $("btn-pv-back-words")
+    $("btn-pv-history"), $("btn-pv-back-words"),
+    // повторение из истории (кнопки «Повторить» в записях дня создаются динамически)
+    $("btn-review-flip"), $("btn-review-known"), $("btn-review-repeat"), $("btn-review-back")
   ];
   setActionsDisabled(true);
 
@@ -1374,6 +1495,12 @@
     return renderHistory();
   }));
   $("btn-pv-back-words").addEventListener("click", lock(pvBackToWords));
+
+  // повторение из истории: карточки без записи в базу, возврат в историю
+  $("btn-review-flip").addEventListener("click", lock(reviewFlipCard));
+  $("btn-review-known").addEventListener("click", lock(function () { return reviewAnswer(true); }));
+  $("btn-review-repeat").addEventListener("click", lock(function () { return reviewAnswer(false); }));
+  $("btn-review-back").addEventListener("click", lock(renderHistory));
 
   boot()
     .then(function () {

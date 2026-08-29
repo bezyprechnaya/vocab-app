@@ -174,6 +174,47 @@
     </div>
   </section>
 
+  <!-- Экран: повторение выученного из истории (по карточкам, без записи в базу) -->
+  <section id="screen-review" class="screen" hidden>
+    <p class="eyebrow eyebrow-pv" id="review-eyebrow">Повторение</p>
+    <h1 class="headline" id="review-headline">Повторение слов</h1>
+
+    <div id="review-flow">
+      <p class="progress-line">Карточек в очереди: <b id="review-progress">0</b></p>
+
+      <div class="flip-scene">
+        <button id="btn-review-flip" class="flip-card" aria-label="показать перевод">
+          <div class="flip-inner" id="review-flip-inner">
+            <div class="flip-face flip-front">
+              <span id="review-pos" class="pos-chip">сущ.</span>
+              <span id="review-card-front" class="big-word">…</span>
+              <span class="card-foot">нажмите, чтобы увидеть перевод</span>
+            </div>
+            <div class="flip-face flip-back" id="review-back-face">
+              <span id="review-back-title" class="small-word">…</span>
+              <span id="review-card-ru" class="ru-word">…</span>
+              <span id="review-ex-en" class="pv-example" hidden>…</span>
+              <span id="review-ex-ru" class="pv-example pv-example-ru" hidden>…</span>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <div class="btn-row" id="review-actions" hidden>
+        <button id="btn-review-repeat" class="btn btn-dont">Повторить ещё</button>
+        <button id="btn-review-known" class="btn btn-know">Знаю</button>
+      </div>
+    </div>
+
+    <div id="review-done" hidden>
+      <div class="done-seal seal-pv">✓</div>
+      <p class="lead" id="review-done-note">Повторение завершено</p>
+      <div class="done-actions">
+        <button id="btn-review-back" class="btn btn-ghost">← В историю</button>
+      </div>
+    </div>
+  </section>
+
   <!-- Экран: все три списка пройдены -->
   <section id="screen-congrats" class="screen" hidden>
     <div class="done-seal seal-gold">★</div>
