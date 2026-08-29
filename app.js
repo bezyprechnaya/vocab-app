@@ -174,7 +174,14 @@
   }
   function putSession(s) {
     return ensureDB().then(function (d) {
-      return idbReq(d.transaction("sessions", "readwrite").objectStore("sessions").put(s));
+      var store = d.transaction("sessions", "readwrite").objectStore("sessions");
+      return idbReq(store.get(s.date)).then(function (existing) {
+        // защита завершённых дней (и слов, и ПВ-сессий): запись с фазой 'done'
+        // нельзя затереть промежуточной записью (например, при задвоенном клике);
+        // сохранение новой записи 'done' поверх старой 'done' разрешено
+        if (existing && existing.phase === "done" && s.phase !== "done") return existing;
+        return idbReq(store.put(s));
+      });
     });
   }
   function deleteSession(date) {
@@ -421,7 +428,7 @@
   // Экраны
   // ============================================================
 
-  var SCREENS = ["screen-loading", "screen-sort", "screen-cards", "screen-check", "screen-done", "screen-congrats", "screen-history", "screen-pv-sort", "screen-pv-cards", "screen-pv-check", "screen-pv-done"];
+  var SCREENS = ["screen-loading", "screen-sort", "screen-cards", "screen-check", "screen-done", "screen-congrats", "screen-history", "screen-review", "screen-pv-sort", "screen-pv-cards", "screen-pv-check", "screen-pv-done"];
 
   function showScreen(id) {
     SCREENS.forEach(function (s) { $(s).hidden = (s !== id); });
