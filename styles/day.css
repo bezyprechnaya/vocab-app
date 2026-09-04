@@ -1,0 +1,101 @@
+/* Три этапа дня: сортировка, карточки, проверка. Один набор стилей на слова
+   и фразовые глаголы — движок дня общий. */
+
+.day { display: flex; flex-direction: column; flex: 1; gap: var(--gap); }
+
+.day__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.word-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 200px;
+  padding: 20px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
+  animation: appear .18s ease-out;
+}
+
+@keyframes appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.word-card__en {
+  font-size: clamp(24px, 7vw, 34px);
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.word-card__pos { color: var(--muted); font-size: 14px; }
+.word-card__tr { font-size: clamp(18px, 5.5vw, 24px); color: var(--accent); overflow-wrap: anywhere; }
+.word-card__hint { color: var(--muted); font-size: 13px; }
+
+/* Пример: не ломает 320 px, сворачивается до трёх строк с раскрытием по тапу. */
+.example {
+  width: 100%;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+  cursor: pointer;
+}
+.example__en { color: var(--text); }
+.example__tr { color: var(--muted); margin-top: 2px; }
+.example--clamped .example__en,
+.example--clamped .example__tr {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.badge-mt {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  vertical-align: middle;
+  cursor: help;
+}
+
+/* Карточка-переворот */
+.flip { perspective: 1000px; flex: 1; display: flex; }
+.flip__inner {
+  position: relative;
+  flex: 1;
+  transition: transform .4s;
+  transform-style: preserve-3d;
+}
+.flip__inner.flipped { transform: rotateY(180deg); }
+.flip__face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+}
+.flip__face--back { transform: rotateY(180deg); }
+
+.dots { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--surface-2); }
+.dot.done { background: var(--good); }
+.dot.active { background: var(--accent); transform: scale(1.3); }
+
+.done-hero { text-align: center; padding: 24px 0; }
+.done-hero__mark { font-size: 44px; }
+.done-hero__title { margin: 8px 0 4px; font-size: 22px; }

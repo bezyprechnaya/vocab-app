@@ -1,0 +1,23 @@
+{
+ "schema": 1,
+ "packs": [
+  {
+   "lang": "ru",
+   "level": "b1",
+   "kind": "words",
+   "count": 12,
+   "bytes": 2253,
+   "builtAt": "2026-09-04",
+   "path": "ru/b1.json"
+  },
+  {
+   "lang": "ru",
+   "level": "phrasal",
+   "kind": "phrasal",
+   "count": 208,
+   "bytes": 48396,
+   "builtAt": "2026-09-04",
+   "path": "ru/phrasal.json"
+  }
+ ]
+}

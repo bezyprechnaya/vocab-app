@@ -1,0 +1,246 @@
+/* Базовые токены, каркас экрана и общие элементы.
+   Вёрстка mobile-first: сначала 320 px, потом расширения для больших экранов. */
+
+@import url("./home.css");
+@import url("./day.css");
+@import url("./lists.css");
+
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --text: #16191d;
+  --muted: #626b78;
+  --line: #d9dee6;
+  --accent: #1f6feb;
+  --accent-text: #ffffff;
+  --good: #1a7f4b;
+  --warn: #a8620a;
+  --bad: #c0392b;
+  --radius: 14px;
+  --gap: 12px;
+  --tap: 48px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171b;
+    --surface: #1c2128;
+    --surface-2: #262c34;
+    --text: #e8ecf1;
+    --muted: #9aa5b1;
+    --line: #333b45;
+    --accent: #4c8dff;
+    --accent-text: #0b0f14;
+    --good: #4ac585;
+    --warn: #e0a458;
+    --bad: #ef6b5b;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior-y: contain;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* ── Верхняя панель ─────────────────────────────────────────────────── */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: var(--tap) 1fr var(--tap);
+  align-items: center;
+  padding-top: var(--safe-top);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar__back,
+.topbar__help {
+  height: var(--tap);
+  min-width: var(--tap);
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.topbar__help { font-size: 19px; }
+.topbar__back[hidden], .topbar__help[hidden] { display: none; }
+
+/* ── Полотно экрана ─────────────────────────────────────────────────── */
+
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: var(--gap);
+  padding-left: max(var(--gap), var(--safe-left));
+  padding-right: max(var(--gap), var(--safe-right));
+  padding-bottom: calc(var(--gap) + var(--safe-bottom));
+  outline: none;
+}
+
+.screen__lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.section-title {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--gap);
+}
+
+.muted { color: var(--muted); }
+.center { text-align: center; }
+.grow { flex: 1; }
+.spacer { flex: 1 1 auto; min-height: 8px; }
+
+/* ── Кнопки ─────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--tap);
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: .5; cursor: default; }
+.btn--primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.btn--good { background: var(--good); border-color: var(--good); color: #fff; }
+.btn--bad { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn--ghost { background: transparent; }
+.btn--danger { color: var(--bad); border-color: var(--bad); background: transparent; }
+.btn--wide { width: 100%; }
+.btn--small { min-height: 36px; padding: 6px 12px; font-size: 14px; font-weight: 500; }
+
+/* Основные действия — в нижней трети экрана, под большой палец. */
+.actions {
+  display: flex;
+  gap: var(--gap);
+  margin-top: auto;
+  padding-top: var(--gap);
+}
+.actions .btn { flex: 1; }
+
+/* ── Тост и модальное окно ──────────────────────────────────────────── */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + var(--safe-bottom));
+  z-index: 30;
+  transform: translate(-50%, 20px);
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--gap);
+  padding-bottom: calc(var(--gap) + var(--safe-bottom));
+  background: rgba(0, 0, 0, .45);
+}
+.modal[hidden] { display: none; }
+
+.modal__box {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.modal__title { margin: 0 0 8px; font-size: 17px; }
+.modal__text { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+.modal__actions { display: flex; gap: var(--gap); }
+.modal__actions .btn { flex: 1; }
+
+/* ── Прогресс ───────────────────────────────────────────────────────── */
+
+.bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.bar__fill { height: 100%; background: var(--accent); border-radius: 999px; }
+
+@media (min-width: 600px) {
+  .modal { align-items: center; }
+}

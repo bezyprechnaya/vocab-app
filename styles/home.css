@@ -1,0 +1,35 @@
+/* Экран-хаб: список действий с состоянием у каждого. */
+
+.hub { display: flex; flex-direction: column; gap: 10px; }
+
+.hub__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hub__icon { font-size: 22px; width: 28px; text-align: center; flex: none; }
+.hub__body { flex: 1; min-width: 0; }
+.hub__name { font-weight: 600; }
+.hub__state { color: var(--muted); font-size: 13px; }
+.hub__chev { color: var(--muted); font-size: 22px; flex: none; }
+.hub__item--done .hub__state { color: var(--good); }
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gap);
+  text-align: center;
+}
+.stats__num { font-size: 22px; font-weight: 700; }
+.stats__label { font-size: 12px; color: var(--muted); }
