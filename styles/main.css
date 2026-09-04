@@ -106,7 +106,9 @@ html, body {
 }
 
 .topbar__help { font-size: 19px; }
-.topbar__back[hidden], .topbar__help[hidden] { display: none; }
+
+/* Скрытые кнопки панели остаются в сетке: иначе заголовок съезжает из центра. */
+.topbar__back[hidden], .topbar__help[hidden] { display: block; visibility: hidden; }
 
 /* ── Полотно экрана ─────────────────────────────────────────────────── */
 

@@ -1,7 +1,7 @@
 /* Хаб — стартовый экран. У каждого пункта видно состояние, чтобы попасть
    в нужное место одним нажатием (глава I, 3.1). */
 
-import { el, plural } from "../ui.js";
+import { el, plural, formatDate } from "../ui.js";
 import * as session from "../session.js";
 import * as progress from "../progress.js";
 import * as settingsStore from "../settings.js";
@@ -50,7 +50,9 @@ export async function render({ navigate }) {
         : "Пока пусто",
       hash: "#/history", navigate }),
     hubItem({ icon: "🔁", name: "Повторить",
-      state: lastClosed ? `Последний день: ${lastClosed.date}` : "Нет закрытых дней",
+      state: lastClosed
+        ? `Последний день: ${formatDate(lastClosed.date)}`
+        : "Нет закрытых дней",
       disabled: !lastClosed,
       hash: lastClosed ? `#/review/${lastClosed.date}/${lastClosed.kind}` : "#/history",
       navigate }),
