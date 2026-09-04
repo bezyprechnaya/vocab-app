@@ -2,7 +2,7 @@
    Разрушительные действия — только через подтверждение и с предложением
    сначала сделать экспорт. */
 
-import { el, plural, toast, confirmAction } from "../ui.js";
+import { el, plural, toast, confirmAction, chooseAction } from "../ui.js";
 import * as db from "../db.js";
 import * as backup from "../backup.js";
 import * as settingsStore from "../settings.js";
@@ -55,14 +55,18 @@ export async function render(ctx) {
         `В файле: ${plural(parsed.data.items.length, "запись", "записи", "записей")}, `
         + `прогресс по ${plural((parsed.data.progress || []).length, "слову", "словам", "словам")}, `
         + `${plural((parsed.data.sessions || []).length, "день", "дня", "дней")} истории.`);
-      const replace = await confirmAction({
+      const choice = await chooseAction({
         title: "Как импортировать?",
         text: "«Объединить» — победит более продвинутый статус, ничего не потеряется. "
           + "«Заменить всё» — текущая база будет стёрта целиком.",
-        confirmLabel: "Заменить всё",
+        options: [
+          { label: "Объединить", value: "merge", tone: "primary" },
+          { label: "Заменить всё", value: "replace", tone: "bad" },
+        ],
         extra: box,
       });
-      if (replace) {
+      if (choice === null) return;
+      if (choice === "replace") {
         const sure = await confirmAction({
           title: "Стереть текущую базу?",
           text: "Слова, прогресс и история будут заменены содержимым файла. Отменить нельзя.",

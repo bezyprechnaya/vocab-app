@@ -71,6 +71,27 @@ export function confirmAction({ title, text, confirmLabel = "Удалить", ex
   });
 }
 
+/** Диалог с несколькими вариантами. Возвращает value выбранной кнопки или null,
+    если человек отказался: отмена — всегда отдельный, безопасный выход. */
+export function chooseAction({ title, text, options, extra }) {
+  const box = document.getElementById("modal");
+  return new Promise((resolve) => {
+    const close = (value) => { box.hidden = true; clear(box); resolve(value); };
+    const buttons = options.map((option) => el(
+      `button.btn${option.tone ? `.btn--${option.tone}` : ""}`,
+      { type: "button", onclick: () => close(option.value) }, option.label));
+    clear(box).append(el("div.modal__box", {},
+      el("h2.modal__title", {}, title),
+      el("p.modal__text", {}, text),
+      extra || null,
+      el("div.modal__actions", { style: "flex-wrap:wrap" },
+        el("button.btn", { type: "button", onclick: () => close(null) }, "Отмена"),
+        buttons)));
+    box.hidden = false;
+    box.onclick = (e) => { if (e.target === box) close(null); };
+  });
+}
+
 export function todayISO(date = new Date()) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
