@@ -30,7 +30,7 @@ const ROUTES = [
 export const HOME = "#/home";
 
 let container = null;
-let depth = 0;               // сколько наших переходов лежит в истории браузера
+let stack = [];              // наши переходы: последний элемент — текущий экран
 let rendering = false;
 
 function parse(hash) {
@@ -53,13 +53,26 @@ function parse(hash) {
 export function navigate(hash, { replace = false } = {}) {
   const target = hash.startsWith("#") ? hash : `#${hash}`;
   if (target === location.hash) return render();
-  if (replace) location.replace(target);
-  else { depth++; location.hash = target; }
+  if (replace) {
+    stack[Math.max(stack.length - 1, 0)] = target;
+    location.replace(target);
+  } else {
+    location.hash = target;
+  }
 }
 
+/** Назад — шагом браузера, если шаг наш; иначе на хаб. Кнопка «назад» телефона
+    и жест работают тем же путём: стек ведём по hashchange. */
 export function back() {
-  if (depth > 0) { depth--; window.history.back(); }
+  if (stack.length > 1) window.history.back();
   else navigate(HOME, { replace: true });
+}
+
+function trackHash() {
+  const current = location.hash || HOME;
+  if (stack.length > 1 && stack[stack.length - 2] === current) stack.pop();
+  else if (stack[stack.length - 1] !== current) stack.push(current);
+  return render();
 }
 
 export function canGoBack() {
@@ -102,9 +115,10 @@ function setTitle(text) {
 
 export function start(node) {
   container = node;
-  window.addEventListener("hashchange", render);
+  window.addEventListener("hashchange", trackHash);
   document.getElementById("back").addEventListener("click", back);
   document.getElementById("help-link").addEventListener("click", () => navigate("#/help"));
   if (!location.hash) location.replace(HOME);
+  stack = [location.hash || HOME];
   return render();
 }

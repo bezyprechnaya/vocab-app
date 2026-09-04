@@ -61,14 +61,24 @@ export async function touch(id, date) {
   });
 }
 
-/** Незавершённый вчерашний день оставляет слова в `learning` — возвращаем их в `new`. */
-export async function releaseLearning() {
+/** Незакрытый день прошлого оставляет слова в `learning` — возвращаем их в пул.
+    Слова сегодняшних незакрытых дней не трогаем: такой день ещё идёт, и его набор
+    (в том числе набор соседнего занятия) должен остаться на месте. */
+export async function releaseLearning(today) {
   const rows = await db.indexAll("progress", "status", LEARNING);
   if (!rows.length) return 0;
+  const sessions = await db.indexAll("sessions", "date", today);
+  const busy = new Set();
+  for (const session of sessions) {
+    if (session.phase === "done") continue;
+    for (const id of session.daySet || []) busy.add(id);
+  }
+  const stale = rows.filter((row) => !busy.has(row.id));
+  if (!stale.length) return 0;
   await db.transact(["progress"], "readwrite", (s) => {
-    for (const row of rows) s.progress.delete(row.id);
+    for (const row of stale) s.progress.delete(row.id);
   });
-  return rows.length;
+  return stale.length;
 }
 
 /** Сколько записей вида `kind` на уровне `level` выучено и сколько осталось. */

@@ -89,6 +89,27 @@ export async function render(ctx) {
       side);
 
     if (have) {
+      const updated = (entry.builtAt && have.builtAt && entry.builtAt > have.builtAt)
+        || entry.count !== have.count;
+      if (updated) {
+        side.append(el("button.btn.btn--small.btn--primary", {
+          type: "button",
+          disabled: !packs.online(),
+          title: `В каталоге ${entry.count} записей, установлено ${have.count}`,
+          onclick: async (e) => {
+            e.currentTarget.disabled = true;
+            e.currentTarget.textContent = "Обновление…";
+            try {
+              await packs.install(entry);
+              toast("Пакет обновлён — прогресс сохранён");
+              ctx.refresh();
+            } catch (error) {
+              toast(`Не получилось: ${error.message}`);
+              ctx.refresh();
+            }
+          },
+        }, "Обновить"));
+      }
       if (entry.kind === "words" && !isActiveLevel) {
         side.append(el("button.btn.btn--small", {
           type: "button",

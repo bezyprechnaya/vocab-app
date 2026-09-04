@@ -132,3 +132,37 @@ export function originBadge(origin) {
     title: "Машинный перевод: слово переведено автоматически, смысл уточняйте по примеру",
   }, "mt");
 }
+
+/** Свайп по карточке: влево — «повторить ещё», вправо — «знаю» (глава I, 3.7).
+    Кнопки остаются на месте, свайп — только дополнение к ним. */
+export function attachSwipe(node, { onLeft, onRight, threshold = 60 } = {}) {
+  let startX = null, startY = null, moved = false;
+
+  node.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    startX = e.clientX; startY = e.clientY; moved = false;
+  });
+
+  node.addEventListener("pointermove", (e) => {
+    if (startX === null) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (Math.abs(dx) < Math.abs(dy)) return;          // вертикальный жест — это скролл
+    moved = Math.abs(dx) > 10;
+    if (moved) node.style.transform = `translateX(${dx}px)`;
+  });
+
+  const finish = (e) => {
+    if (startX === null) return;
+    const dx = (e.clientX ?? startX) - startX;
+    node.style.transform = "";
+    startX = null;
+    if (!moved) return;
+    if (dx <= -threshold && onLeft) onLeft();
+    else if (dx >= threshold && onRight) onRight();
+  };
+
+  node.addEventListener("pointerup", finish);
+  node.addEventListener("pointercancel", () => { node.style.transform = ""; startX = null; });
+  return node;
+}

@@ -89,7 +89,6 @@ async function renderDay(ctx) {
             await session.removeDay(day.id);
             toast("День удалён");
             ctx.navigate("#/history", { replace: true });
-            ctx.refresh();
           },
         }, "Удалить день"))));
   }

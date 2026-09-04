@@ -1,7 +1,7 @@
 /* Этап 1 — сортировка: знакомое слово уходит в выученные сразу, незнакомое
    остаётся в наборе дня. Набор добирается до нужного размера автоматически. */
 
-import { el, posLabel, formatDate } from "../ui.js";
+import { el, posLabel, formatDate, attachSwipe } from "../ui.js";
 import * as session from "../session.js";
 
 export async function render(ctx, current) {
@@ -16,14 +16,17 @@ export async function render(ctx, current) {
     ctx.refresh();
   };
 
+  const card = el("div.word-card", {},
+    el("div.word-card__en", {}, item.en),
+    el("div.word-card__pos", {}, posLabel(item.pos)),
+    el("div.word-card__hint", {}, `В наборе дня: ${current.daySet.length} из ${current.size}`));
+  attachSwipe(card, { onLeft: () => answer(false), onRight: () => answer(true) });
+
   return el("div.day", {},
     el("div.day__head", {},
       el("span", {}, "Этап 1 из 3 · знакомо?"),
       el("span", {}, formatDate(current.date))),
-    el("div.word-card", {},
-      el("div.word-card__en", {}, item.en),
-      el("div.word-card__pos", {}, posLabel(item.pos)),
-      el("div.word-card__hint", {}, `В наборе дня: ${current.daySet.length} из ${current.size}`)),
+    card,
     el("p.screen__lead.center", {},
       "«Знаю» — слово сразу считается выученным и заменяется другим."),
     el("div.actions", {},

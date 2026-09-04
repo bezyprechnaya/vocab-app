@@ -1,7 +1,7 @@
 /* Этап 2 — карточки: переворот, перевод и пример. «Повторить» отправляет
    карточку в конец круга, «Знаю» убирает её из него. */
 
-import { el, posLabel, exampleBlock, originBadge, formatDate } from "../ui.js";
+import { el, posLabel, exampleBlock, originBadge, formatDate, attachSwipe } from "../ui.js";
 import * as session from "../session.js";
 import * as settingsStore from "../settings.js";
 
@@ -15,14 +15,13 @@ export async function render(ctx, current) {
 
   const settings = await settingsStore.get();
   const lang = settings.lang;
+  const repeat = async () => { await session.cardRepeat(current); ctx.refresh(); };
+  const known = async () => { await session.cardKnown(current); ctx.refresh(); };
+
   const flip = el("div.flip__inner");
   const actions = el("div.actions", { hidden: true },
-    el("button.btn", { type: "button", onclick: async () => {
-      await session.cardRepeat(current); ctx.refresh();
-    } }, "Повторить"),
-    el("button.btn.btn--good", { type: "button", onclick: async () => {
-      await session.cardKnown(current); ctx.refresh();
-    } }, "Знаю"));
+    el("button.btn", { type: "button", onclick: repeat }, "Повторить"),
+    el("button.btn.btn--good", { type: "button", onclick: known }, "Знаю"));
 
   const turn = () => {
     const flipped = flip.classList.toggle("flipped");
@@ -43,6 +42,8 @@ export async function render(ctx, current) {
         el("div.word-card__en", {}, item.en),
         el("div.word-card__tr", {}, item.tr?.[lang] || "—", originBadge(item.src?.[lang])),
         exampleBlock(item.exEn, item.exTr?.[lang]))));
+
+  attachSwipe(flip, { onLeft: repeat, onRight: known });
 
   return el("div.day", {},
     el("div.day__head", {},

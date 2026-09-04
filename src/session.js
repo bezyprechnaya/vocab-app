@@ -74,7 +74,7 @@ export async function loadOrStart(kind, date = todayISO()) {
   const existing = await load(kind, date);
   if (existing) return existing;
 
-  await progress.releaseLearning();          // хвосты незакрытых дней возвращаем в пул
+  await progress.releaseLearning(date);      // хвосты прошлых незакрытых дней — в пул
   const settings = await settingsStore.get();
   const level = await pickLevel(kind, settings.level);
   if (!level) return null;
