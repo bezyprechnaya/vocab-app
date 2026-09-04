@@ -87,7 +87,7 @@ src/
   settings.js         настройки приложения
   screens/            home, day, sort, cards, check, done, history,
                       review, packs, settings, help, onboarding
-tools/                build-packs.py, import-legacy.py, data/
+tools/                build-packs.py, import-legacy.py, data/, legacy/
 packs/                готовые пакеты и index.json
 sw.js                 service worker: единственная точка версионирования
 serve.py              локальный сервер разработки

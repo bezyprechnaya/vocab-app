@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Разовый импорт данных старого приложения в исходники сборщика пакетов.
 
-Читает `words-b1.js`, `words-b2.js`, `words-c1.js` и `phrasal-verbs.js` — 3610 слов
+Читает файлы старого приложения из `tools/legacy/` — `words-b1.js`, `words-b2.js`, `words-c1.js` и `phrasal-verbs.js` — 3610 слов
 и 208 фразовых глаголов с выверенными вручную русскими переводами — и раскладывает их
 по двум файлам, с которыми дальше работает `build-packs.py`:
 
@@ -25,6 +25,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "tools" / "data"
+LEGACY = ROOT / "tools" / "legacy"
 
 WORD_FILES = ["words-b1.js", "words-b2.js", "words-c1.js"]
 PHRASAL_FILE = "phrasal-verbs.js"
@@ -56,7 +57,7 @@ def main():
     dropped = 0
 
     for name in WORD_FILES:
-        path = ROOT / name
+        path = LEGACY / name
         if not path.exists():
             sys.exit(f"нет файла {path}")
         for row in read_rows(path):
@@ -73,7 +74,7 @@ def main():
             overrides.append((en, pos, tr, "", ""))
 
     senses = {}
-    for row in read_rows(ROOT / PHRASAL_FILE):
+    for row in read_rows(LEGACY / PHRASAL_FILE):
         en, tr, ex_en, ex_tr = (norm(x) for x in row[:4])
         en = en.lower()
         if not en or not tr:
