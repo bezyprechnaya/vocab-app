@@ -8,6 +8,7 @@ import { clear, el, toast } from "./ui.js";
 
 import * as home from "./screens/home.js";
 import * as day from "./screens/day.js";
+import * as endless from "./screens/endless.js";
 import * as history from "./screens/history.js";
 import * as review from "./screens/review.js";
 import * as packs from "./screens/packs.js";
@@ -18,6 +19,7 @@ import * as onboarding from "./screens/onboarding.js";
 const ROUTES = [
   { pattern: "/home", screen: home },
   { pattern: "/day/:kind", screen: day },
+  { pattern: "/endless/:kind", screen: endless },
   { pattern: "/history", screen: history },
   { pattern: "/history/:date", screen: history },
   { pattern: "/review/:date/:kind", screen: review },

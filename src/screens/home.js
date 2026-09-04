@@ -30,6 +30,10 @@ export async function render({ navigate }) {
     settingsStore.get(),
   ]);
 
+  // Бесконечный режим идёт по тому же пулу, что и день: покажем, сколько там осталось.
+  const endlessLevel = await session.pickLevel("words", settings.level, settings);
+  const endlessStats = endlessLevel ? await progress.levelStats("words", endlessLevel) : null;
+
   const closed = days.filter((d) => d.phase === "done");
   const lastClosed = closed[0];
 
@@ -45,6 +49,12 @@ export async function render({ navigate }) {
       hash: "#/day/words", navigate }),
     hubItem({ icon: "🔗", name: "Фразовые глаголы", state: phrasal.text, done: phrasal.done,
       hash: "#/day/phrasal", navigate }),
+    hubItem({ icon: "♾️", name: "Бесконечный режим",
+      state: endlessStats
+        ? `Без дневного лимита · впереди ${endlessStats.total - endlessStats.learned}`
+        : "Нет загруженных слов",
+      disabled: !endlessStats,
+      hash: "#/endless/words", navigate }),
     hubItem({ icon: "🗓", name: "История",
       state: closed.length ? plural(closed.length, "закрытый день", "закрытых дня", "закрытых дней")
         : "Пока пусто",
@@ -57,7 +67,8 @@ export async function render({ navigate }) {
       hash: lastClosed ? `#/review/${lastClosed.date}/${lastClosed.kind}` : "#/history",
       navigate }),
     hubItem({ icon: "🌍", name: "Языки и уровни",
-      state: `${settings.lang.toUpperCase()} · уровень ${settings.level.toUpperCase()}`,
+      state: `${settings.study.toUpperCase()} → ${settings.lang.toUpperCase()}`
+        + ` · уровень ${settings.level.toUpperCase()}`,
       hash: "#/packs", navigate }),
     hubItem({ icon: "❓", name: "Как это работает", state: "Три этапа дня, пакеты, данные",
       hash: "#/help", navigate }),

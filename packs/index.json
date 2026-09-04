@@ -2,13 +2,112 @@
  "schema": 1,
  "packs": [
   {
+   "lang": "en",
+   "level": "a1",
+   "kind": "words",
+   "count": 70,
+   "bytes": 10665,
+   "builtAt": "2026-09-04",
+   "path": "en/a1.json"
+  },
+  {
+   "lang": "en",
+   "level": "a2",
+   "kind": "words",
+   "count": 421,
+   "bytes": 62617,
+   "builtAt": "2026-09-04",
+   "path": "en/a2.json"
+  },
+  {
+   "lang": "en",
+   "level": "b1",
+   "kind": "words",
+   "count": 1441,
+   "bytes": 217720,
+   "builtAt": "2026-09-04",
+   "path": "en/b1.json"
+  },
+  {
+   "lang": "en",
+   "level": "b2",
+   "kind": "words",
+   "count": 516,
+   "bytes": 78245,
+   "builtAt": "2026-09-04",
+   "path": "en/b2.json"
+  },
+  {
+   "lang": "en",
+   "level": "c1",
+   "kind": "words",
+   "count": 11,
+   "bytes": 1498,
+   "builtAt": "2026-09-04",
+   "path": "en/c1.json"
+  },
+  {
+   "lang": "en",
+   "level": "c2",
+   "kind": "words",
+   "count": 17,
+   "bytes": 2763,
+   "builtAt": "2026-09-04",
+   "path": "en/c2.json"
+  },
+  {
+   "lang": "ru",
+   "level": "a1",
+   "kind": "words",
+   "count": 104,
+   "bytes": 5721,
+   "builtAt": "2026-09-04",
+   "path": "ru/a1.json"
+  },
+  {
+   "lang": "ru",
+   "level": "a2",
+   "kind": "words",
+   "count": 552,
+   "bytes": 30059,
+   "builtAt": "2026-09-04",
+   "path": "ru/a2.json"
+  },
+  {
    "lang": "ru",
    "level": "b1",
    "kind": "words",
-   "count": 12,
-   "bytes": 2253,
+   "count": 1441,
+   "bytes": 151305,
    "builtAt": "2026-09-04",
    "path": "ru/b1.json"
+  },
+  {
+   "lang": "ru",
+   "level": "b2",
+   "kind": "words",
+   "count": 1232,
+   "bytes": 71831,
+   "builtAt": "2026-09-04",
+   "path": "ru/b2.json"
+  },
+  {
+   "lang": "ru",
+   "level": "c1",
+   "kind": "words",
+   "count": 110,
+   "bytes": 6660,
+   "builtAt": "2026-09-04",
+   "path": "ru/c1.json"
+  },
+  {
+   "lang": "ru",
+   "level": "c2",
+   "kind": "words",
+   "count": 141,
+   "bytes": 8288,
+   "builtAt": "2026-09-04",
+   "path": "ru/c2.json"
   },
   {
    "lang": "ru",

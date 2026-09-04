@@ -20,8 +20,8 @@ import { shuffle, todayISO } from "./ui.js";
 import { LEVELS } from "./packs.js";
 
 export const KINDS = {
-  words: { title: "Слова дня", icon: "📘", route: "#/day/words" },
-  phrasal: { title: "Фразовые глаголы", icon: "🔗", route: "#/day/phrasal" },
+  words: { title: "Слова дня", short: "Слова", icon: "📘", route: "#/day/words" },
+  phrasal: { title: "Фразовые глаголы", short: "Фразовые", icon: "🔗", route: "#/day/phrasal" },
 };
 
 export const PHASES = ["sort", "cards", "check", "done"];
@@ -42,19 +42,26 @@ export async function save(session) {
   return session;
 }
 
-/** Уровень, на котором ещё есть невыученное. Для фразовых глаголов уровень один. */
-export async function pickLevel(kind, preferred) {
-  if (kind === "phrasal") {
-    const stats = await progress.levelStats("phrasal", "phrasal");
-    return stats.total - stats.learned > 0 ? "phrasal" : null;
-  }
-  const order = [preferred, ...LEVELS.filter((l) => l !== preferred)];
+/** Уровень, на котором ещё есть что учить на выбранной паре языков. Для фразовых
+    глаголов уровень один. Проверяем именно пул: записи без слова или без перевода
+    в день не годятся, а уровень из одних таких записей — не уровень. */
+export async function pickLevel(kind, preferred, pair) {
+  const order = kind === "phrasal"
+    ? ["phrasal"]
+    : [preferred, ...LEVELS.filter((l) => l !== preferred)];
   for (const level of order) {
     if (!level) continue;
-    const stats = await progress.levelStats("words", level);
-    if (stats.total - stats.learned > 0) return level;
+    const pool = await progress.poolFor(kind, level, pair);
+    if (pool.length) return level;
   }
   return null;
+}
+
+/** Слово без примера учится хуже: в отрыве от предложения это просто пара строк.
+    Поэтому набор берётся сначала из записей с примером — порядок внутри групп
+    остаётся случайным. */
+export function withExamplesFirst(list) {
+  return [...list.filter((item) => item.exEn), ...list.filter((item) => !item.exEn)];
 }
 
 function empty(kind, date, level, size) {
@@ -76,12 +83,12 @@ export async function loadOrStart(kind, date = todayISO()) {
 
   await progress.releaseLearning(date);      // хвосты прошлых незакрытых дней — в пул
   const settings = await settingsStore.get();
-  const level = await pickLevel(kind, settings.level);
+  const level = await pickLevel(kind, settings.level, settings);
   if (!level) return null;
 
   const size = settingsStore.perDay(settings, kind);
-  const pool = await progress.poolFor(kind, level);
-  const picked = shuffle(pool).slice(0, size).map((item) => item.id);
+  const pool = await progress.poolFor(kind, level, settings);
+  const picked = withExamplesFirst(shuffle(pool)).slice(0, size).map((item) => item.id);
   const session = empty(kind, date, level, size);
   session.daySet = picked.slice();
   session.sortQueue = shuffle(picked);
@@ -126,11 +133,12 @@ export async function answerSort(session, know) {
 /** Добор набора дня после ответа «знаю»: день должен остаться нужного размера. */
 async function refill(session) {
   if (session.daySet.length >= session.size) return;
-  const pool = await progress.poolFor(session.kind, session.level);
+  const settings = await settingsStore.get();
+  const pool = await progress.poolFor(session.kind, session.level, settings);
   const busy = new Set([...session.daySet, ...session.sortQueue]);
-  const candidates = pool.filter((item) => !busy.has(item.id));
+  const candidates = withExamplesFirst(shuffle(pool.filter((item) => !busy.has(item.id))));
   if (!candidates.length) return;
-  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  const pick = candidates[0];
   session.daySet.push(pick.id);
   session.sortQueue.unshift(pick.id);        // показать следующим
 }
@@ -230,7 +238,7 @@ export async function stateLine(kind, date = todayISO()) {
     return { done: false, text: `${stage}: осталось ${left} из ${session.size}` };
   }
   const settings = await settingsStore.get();
-  const level = await pickLevel(kind, settings.level);
+  const level = await pickLevel(kind, settings.level, settings);
   if (!level) return { done: false, text: "Нет загруженных записей — загрузите пакет" };
   const stats = await progress.levelStats(kind, level);
   const label = kind === "phrasal" ? "" : ` · ${level.toUpperCase()}`;

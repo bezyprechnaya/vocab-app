@@ -3,6 +3,8 @@
 
 import { el, posLabel, formatDate, attachSwipe } from "../ui.js";
 import * as session from "../session.js";
+import * as settingsStore from "../settings.js";
+import * as lang from "../lang.js";
 
 export async function render(ctx, current) {
   const item = await session.currentItem(current);
@@ -11,13 +13,14 @@ export async function render(ctx, current) {
     return ctx.refresh();
   }
 
+  const settings = await settingsStore.get();
   const answer = async (know) => {
     await session.answerSort(current, know);
     ctx.refresh();
   };
 
   const card = el("div.word-card", {},
-    el("div.word-card__en", {}, item.en),
+    el("div.word-card__en", {}, lang.word(item, settings.study)),
     el("div.word-card__pos", {}, posLabel(item.pos)),
     el("div.word-card__hint", {}, `В наборе дня: ${current.daySet.length} из ${current.size}`));
   attachSwipe(card, { onLeft: () => answer(false), onRight: () => answer(true) });

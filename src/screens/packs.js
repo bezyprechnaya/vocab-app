@@ -1,13 +1,23 @@
-/* «Языки и уровни»: каталог пакетов, загрузка и удаление, выбор активного языка
-   и уровня (глава I, 3.2).
+/* «Языки и уровни»: выбор пары языков, уровня, загрузка, сборка и удаление
+   пакетов (глава I, 3.2).
+
+   Языка два: изучаемый — лицевая сторона карточки, язык перевода — оборот.
+   Пара может требовать двух пакетов сразу, поэтому строка уровня показывает
+   состояние обеих сторон, а кнопка доводит до готовности сразу обе.
+
+   Нажатие на язык или уровень — законченное действие: нужные пакеты приезжают
+   сразу. Готового файла в каталоге может не быть — тогда пакет собирается прямо
+   в приложении переводом английских слов и примеров.
 
    Загруженный пакет живёт в IndexedDB — после установки сеть не нужна.
    Удаление пакета не трогает прогресс: выученное остаётся выученным. */
 
 import { el, formatSize, plural, confirmAction, toast } from "../ui.js";
 import * as packs from "../packs.js";
+import * as session from "../session.js";
 import * as progress from "../progress.js";
 import * as settingsStore from "../settings.js";
+import { applyChoice, buildMissing, langChips } from "../choose.js";
 
 export const title = () => "Языки и уровни";
 
@@ -37,29 +47,68 @@ export async function render(ctx) {
     screen.append(el("div.card", {},
       el("div.row__title", {}, "Нет подключения"),
       el("p.muted", { style: "margin:4px 0 0" },
-        "Загрузка пакетов недоступна. Уже загруженные пакеты работают как обычно.")));
+        "Загрузка и сборка пакетов недоступны. Уже загруженные пакеты работают как обычно.")));
   }
 
-  // ── активный язык ────────────────────────────────────────────────────
-  // Показываем все языки первой очереди, даже если пакеты для них ещё не собраны:
-  // иначе о такой возможности нельзя догадаться.
-  const langs = [...new Set([...Object.keys(packs.LANG_NAMES),
-    ...catalog.map((p) => p.lang), settings.lang])];
+  // ── выбор языка и уровня ─────────────────────────────────────────────
+  // Начатый день набран на прежнем уровне и сам не поменяется — предложим начать
+  // заново, иначе смена уровня выглядит так, будто ничего не произошло.
+  const offerRestart = async (level) => {
+    const today = await session.load("words");
+    if (!today || today.phase === "done" || today.level === level) return;
+    const yes = await confirmAction({
+      title: "Начать день заново?",
+      text: `Сегодняшний набор слов взят с уровня ${today.level.toUpperCase()}. `
+        + `Заново — значит новый набор с уровня ${level.toUpperCase()}; `
+        + "выученное останется выученным.",
+      confirmLabel: "Начать заново",
+    });
+    if (!yes) return;
+    await session.removeDay(today.id);
+    toast("День начат заново");
+  };
 
-  screen.append(el("h2.section-title", {}, "Язык перевода"));
-  screen.append(el("div.chips", {}, langs.map((lang) =>
-    el("button.chip" + (lang === settings.lang ? ".chip--on" : ""), {
+  const bar = el("div.bar", { hidden: true }, el("div.bar__fill", { style: "width:0%" }));
+
+  const choose = async (changes) => {
+    bar.hidden = false;
+    bar.firstChild.style.width = "5%";
+    try {
+      await applyChoice(changes, {
+        onProgress: (value) => { bar.firstChild.style.width = `${Math.round(value * 100)}%`; },
+      });
+      if (changes.level) await offerRestart(changes.level);
+    } catch (error) {
+      toast(`Не получилось загрузить: ${error.message}`);
+    }
+    ctx.refresh();
+  };
+
+  // Показываем все языки первой очереди, даже если пакеты для них ещё не собраны:
+  // недостающий язык собирается на месте, и знать о такой возможности нужно заранее.
+  const extra = [...new Set(catalog.map((p) => p.lang))];
+
+  screen.append(el("h2.section-title", {}, "Изучаю"));
+  screen.append(langChips({
+    value: settings.study, other: settings.lang, extra,
+    onPick: (study) => choose({ study }),
+  }));
+
+  screen.append(el("h2.section-title", {}, "Перевод"));
+  screen.append(langChips({
+    value: settings.lang, other: settings.study, extra,
+    onPick: (lang) => choose({ lang }),
+  }));
+
+  screen.append(el("h2.section-title", {}, "Уровень слов дня"));
+  screen.append(el("div.chips", {}, packs.LEVELS.map((level) =>
+    el("button.chip" + (level === settings.level ? ".chip--on" : ""), {
       type: "button",
-      onclick: async () => {
-        await settingsStore.patch({ lang });
-        const ready = [...installed.values()].some((pack) => pack.lang === lang);
-        toast(ready
-          ? "Язык переключён. Прогресс сохранён — он не привязан к языку."
-          : "Язык переключён, но пакетов для него нет: переводы будут пустыми, "
-            + "пока не загрузите пакет.");
-        ctx.refresh();
-      },
-    }, packs.LANG_NAMES[lang] || lang.toUpperCase()))));
+      title: packs.LEVEL_HINTS[level],
+      onclick: () => choose({ level }),
+    }, level.toUpperCase()))));
+  screen.append(el("p.screen__lead", {}, packs.LEVEL_HINTS[settings.level] || ""));
+  screen.append(bar);
 
   if (catalogError) {
     screen.append(el("div.card", {},
@@ -67,88 +116,121 @@ export async function render(ctx) {
       el("p.muted", { style: "margin:4px 0 0" }, String(catalogError.message || catalogError))));
   }
 
-  // ── пакеты активного языка ───────────────────────────────────────────
-  const mine = catalog.filter((p) => p.lang === settings.lang);
-  const order = [...packs.LEVELS, "phrasal"];
-  mine.sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level));
+  // ── пакеты выбранной пары ────────────────────────────────────────────
+  // Строка на каждый уровень. Сторон у пары может быть две, и каждая приходит
+  // своим способом: готовый файл из каталога или сборка здесь. Кнопка одна —
+  // она закрывает всё, чего не хватает.
+  const langName = (code) => packs.LANG_NAMES[code] || code.toUpperCase();
+  const entryOf = (lang, level) =>
+    catalog.find((p) => p.lang === lang && p.level === level) || null;
+  const sides = packs.needed(settings);
 
   screen.append(el("h2.section-title", {}, "Пакеты"));
-  if (!mine.length) {
-    screen.append(el("div.card", {}, el("p.muted", {},
-      "Для этого языка пакеты ещё не собраны. Их готовит tools/build-packs.py — "
-      + "например: python3 tools/build-packs.py --lang "
-      + `${settings.lang} --level all.`)));
-  }
 
-  for (const entry of mine) {
-    const key = `${entry.lang}|${entry.level}`;
-    const have = installed.get(key);
-    const stats = have ? await progress.levelStats(entry.kind, entry.level) : null;
-    const isActiveLevel = settings.level === entry.level && entry.kind === "words";
+  for (const level of [...packs.LEVELS, "phrasal"]) {
+    const kind = level === "phrasal" ? "phrasal" : "words";
+    const parts = sides.map((lang) => ({
+      lang,
+      entry: entryOf(lang, level),
+      have: installed.get(`${lang}|${level}`) || null,
+    }));
+    const stats = await progress.levelStats(kind, level);
+
+    // Английская сторона своего файла может не иметь — тогда словам уровня всё
+    // равно нужен хоть какой-то пакет: из него берутся сами слова и примеры.
+    if (!stats.total && !parts.some((part) => part.have || part.entry)) {
+      const best = catalog.filter((p) => p.level === level).sort((a, b) => b.count - a.count)[0];
+      if (best) parts.push({ lang: best.lang, entry: best, have: null });
+    }
+
+    // Английская сторона без файла не «недостача»: на обороте будет само слово.
+    const missing = parts.filter((part) => !part.have
+      && !(packs.optional(part.lang) && !part.entry));
+    const isActiveLevel = settings.level === level && kind === "words";
 
     const side = el("span.row__side");
+    const rowBar = el("div.bar", { hidden: true }, el("div.bar__fill", { style: "width:0%" }));
+
+    const describe = (part) => {
+      if (part.have && part.have.origin === "local") return `собран здесь ${part.have.installedAt}`;
+      if (part.have) return `загружен ${part.have.installedAt}`;
+      if (part.entry) {
+        return `${plural(part.entry.count, "запись", "записи", "записей")}`
+          + ` · ${formatSize(part.entry.bytes)}`;
+      }
+      return packs.optional(part.lang)
+        ? "толкования нет — на обороте само слово"
+        : "готового файла нет — соберём здесь";
+    };
+    const sub = [
+      parts.length > 1
+        ? parts.map((part) => `${langName(part.lang)}: ${describe(part)}`).join(" · ")
+        : describe(parts[0]),
+      missing.length ? null : `выучено ${stats.learned} из ${stats.total}`,
+    ].filter(Boolean).join(" · ");
+
     const row = el("div.row.row--static", {},
       el("span.row__body", {},
-        el("span.row__title", {}, packs.levelLabel(entry.level),
+        el("span.row__title", {}, packs.levelLabel(level),
           isActiveLevel ? el("span.badge-mt", { title: "Слова дня берутся отсюда" }, "активный") : null),
-        el("span.row__sub", {}, have
-          ? `Загружено ${have.installedAt} · выучено ${stats.learned} из ${stats.total}`
-          : `${plural(entry.count, "запись", "записи", "записей")} · ${formatSize(entry.bytes)}`)),
+        el("span.row__sub", {}, sub)),
       side);
 
-    if (have) {
-      const updated = (entry.builtAt && have.builtAt && entry.builtAt > have.builtAt)
-        || entry.count !== have.count;
-      if (updated) {
+    if (!missing.length) {
+      const stale = parts.filter((part) => part.have && part.entry
+        && ((part.entry.builtAt && part.have.builtAt && part.entry.builtAt > part.have.builtAt)
+          || part.entry.count !== part.have.count));
+      if (stale.length) {
         side.append(el("button.btn.btn--small.btn--primary", {
           type: "button",
           disabled: !packs.online(),
-          title: `В каталоге ${entry.count} записей, установлено ${have.count}`,
+          title: stale.map((part) => `${langName(part.lang)}: в каталоге ${part.entry.count},`
+            + ` установлено ${part.have.count}`).join("; "),
           onclick: async (e) => {
             e.currentTarget.disabled = true;
             e.currentTarget.textContent = "Обновление…";
             try {
-              await packs.install(entry);
+              for (const part of stale) await packs.install(part.entry);
               toast("Пакет обновлён — прогресс сохранён");
-              ctx.refresh();
             } catch (error) {
               toast(`Не получилось: ${error.message}`);
-              ctx.refresh();
             }
+            ctx.refresh();
           },
         }, "Обновить"));
       }
-      if (entry.kind === "words" && !isActiveLevel) {
+      if (kind === "words" && !isActiveLevel) {
         side.append(el("button.btn.btn--small", {
           type: "button",
-          onclick: async () => {
-            await settingsStore.patch({ level: entry.level });
-            toast(`Активный уровень: ${entry.level.toUpperCase()}`);
-            ctx.refresh();
-          },
+          onclick: () => choose({ level }),
         }, "Сделать активным"));
       }
-      side.append(el("button.btn.btn--small.btn--danger", {
-        type: "button",
-        onclick: async () => {
-          const yes = await confirmAction({
-            title: `Удалить пакет ${packs.levelLabel(entry.level)}?`,
-            text: "Слова этого пакета исчезнут из базы, но прогресс останется: "
-              + "если поставить пакет заново, выученное так и будет выученным.",
-          });
-          if (!yes) return;
-          await packs.uninstall(entry.lang, entry.level);
-          toast("Пакет удалён");
-          ctx.refresh();
-        },
-      }, "Удалить"));
+      const installedParts = parts.filter((part) => part.have);
+      if (installedParts.length) {
+        side.append(el("button.btn.btn--small.btn--danger", {
+          type: "button",
+          onclick: async () => {
+            const yes = await confirmAction({
+              title: `Удалить пакет ${packs.levelLabel(level)}?`,
+              text: `Слова этого уровня (${installedParts.map((part) => langName(part.lang)).join(", ")}) `
+                + "исчезнут из базы, но прогресс останется: если поставить пакет заново, "
+                + "выученное так и будет выученным.",
+            });
+            if (!yes) return;
+            for (const part of installedParts) await packs.uninstall(part.lang, level);
+            toast("Пакет удалён");
+            ctx.refresh();
+          },
+        }, "Удалить"));
+      }
     } else {
-      const bar = el("div.bar", { hidden: true }, el("div.bar__fill", { style: "width:0%" }));
+      const bytes = missing.reduce((sum, part) => sum + (part.entry?.bytes || 0), 0);
+      const label = missing.every((part) => part.entry) ? "Загрузить" : "Собрать";
       const button = el("button.btn.btn--small.btn--primary", {
         type: "button",
         disabled: !packs.online(),
         onclick: async () => {
-          const warning = connectionWarning(entry.bytes);
+          const warning = connectionWarning(bytes);
           if (warning) {
             const go = await confirmAction({
               title: "Загрузить пакет?", text: warning, confirmLabel: "Загрузить",
@@ -157,32 +239,40 @@ export async function render(ctx) {
           }
           button.disabled = true;
           button.textContent = "Загрузка…";
-          bar.hidden = false;
+          rowBar.hidden = false;
           try {
-            await packs.install(entry, (value) => {
-              bar.firstChild.style.width = `${Math.round(value * 100)}%`;
-            });
-            toast("Пакет загружен — дальше сеть не нужна");
+            for (const part of missing) {
+              if (part.entry) {
+                await packs.install(part.entry, (value) => {
+                  rowBar.firstChild.style.width = `${Math.round(value * 100)}%`;
+                });
+              } else if (!await buildMissing(part.lang, level)) {
+                break;
+              }
+            }
             ctx.refresh();
           } catch (error) {
             toast(`Не получилось: ${error.message}`);
             button.disabled = false;
-            button.textContent = "Загрузить";
-            bar.hidden = true;
+            button.textContent = label;
+            rowBar.hidden = true;
           }
         },
-      }, "Загрузить");
+      }, label);
       side.append(button);
-      row.append(bar);
+      row.append(rowBar);
     }
 
     screen.append(row);
   }
 
   screen.append(el("p.screen__lead", {},
-    "Пакет — это один файл с записями уровня. После загрузки он лежит в браузере, "
-    + "и приложение работает без интернета. Прогресс хранится отдельно от пакетов, "
-    + "поэтому переключение языка или удаление пакета его не стирают."));
+    "Пакет — это записи одного уровня на одном языке: слово, перевод и пример. "
+    + "Карточке нужны две стороны, поэтому пара языков может требовать двух пакетов. "
+    + "Готовые пакеты скачиваются файлом, остальные собираются здесь переводом "
+    + "английских слов и примеров — такие записи помечены «mt». После этого пакеты "
+    + "лежат в браузере, и приложение работает без интернета. Прогресс хранится "
+    + "отдельно от пакетов, поэтому смена языков или удаление пакета его не стирают."));
 
   return screen;
 }

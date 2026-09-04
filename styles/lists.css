@@ -36,6 +36,8 @@
   cursor: pointer;
 }
 .chip--on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.chip[disabled] { opacity: .5; cursor: default; }
+.chips--center { justify-content: center; }
 
 .words-list { display: flex; flex-direction: column; gap: 8px; }
 .word-row {
@@ -59,3 +61,11 @@
 .onboarding__title { margin: 0; font-size: 24px; }
 .onboarding__text { margin: 0; color: var(--muted); }
 .onboarding__dots { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+
+/* Выбор языка и уровня на знакомстве: ряды кнопок и строка состояния под ними. */
+.choice { display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center; }
+.choice .chips { justify-content: center; }
+.choice__label { font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 4px; }
+.choice__hint { margin: 4px 0 0; font-size: 14px; color: var(--muted); min-height: 40px; }
+.choice__status { margin: 0; font-size: 13px; color: var(--muted); min-height: 18px; }
+.choice .bar { width: 100%; }

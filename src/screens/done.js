@@ -3,6 +3,7 @@
 import { el, plural, formatDate } from "../ui.js";
 import * as session from "../session.js";
 import * as settingsStore from "../settings.js";
+import * as lang from "../lang.js";
 
 export async function render(ctx, current) {
   const settings = await settingsStore.get();
@@ -17,8 +18,8 @@ export async function render(ctx, current) {
 
     items.length
       ? el("div.words-list", {}, items.map((item) => el("div.word-row", {},
-          el("span.word-row__en", {}, item.en),
-          el("span.word-row__tr", {}, item.tr?.[settings.lang] || "—"))))
+          el("span.word-row__en", {}, lang.word(item, settings.study)),
+          el("span.word-row__tr", {}, lang.meaning(item, settings.lang) || "—"))))
       : el("p.muted.center", {}, "Все слова набора оказались знакомыми."),
 
     el("div.actions", {},

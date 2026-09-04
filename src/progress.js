@@ -6,6 +6,7 @@
    переустановка пакета его не трогают (глава I, 2.2). */
 
 import * as db from "./db.js";
+import * as lang from "./lang.js";
 
 export const NEW = "new";
 export const LEARNING = "learning";
@@ -94,11 +95,14 @@ export async function levelStats(kind, level) {
   return { total: ids.length, learned, learning, fresh: ids.length - learned - learning };
 }
 
-/** Записи, ещё не выученные: из них набирается день. */
-export async function poolFor(kind, level) {
+/** Записи, ещё не выученные: из них набирается день. Если задана пара языков,
+    записи без слова или без перевода не берём — карточка с прочерком ничему
+    не учит. `pair` — настройки: `{ study, lang }`. */
+export async function poolFor(kind, level, pair) {
   const items = await db.indexAll("items", "kind_level", [kind, level]);
   const learned = new Set(await idsWithStatus(LEARNED));
-  return items.filter((item) => !learned.has(item.id));
+  return items.filter((item) => !learned.has(item.id)
+    && (!pair || lang.usable(item, pair)));
 }
 
 export async function totals() {

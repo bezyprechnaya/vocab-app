@@ -4,6 +4,7 @@
 import { el, posLabel, exampleBlock, originBadge, formatDate, attachSwipe } from "../ui.js";
 import * as session from "../session.js";
 import * as settingsStore from "../settings.js";
+import * as lang from "../lang.js";
 
 export async function render(ctx, current) {
   const item = await session.currentItem(current);
@@ -14,7 +15,6 @@ export async function render(ctx, current) {
   await session.present(current);
 
   const settings = await settingsStore.get();
-  const lang = settings.lang;
   const repeat = async () => { await session.cardRepeat(current); ctx.refresh(); };
   const known = async () => { await session.cardKnown(current); ctx.refresh(); };
 
@@ -31,17 +31,19 @@ export async function render(ctx, current) {
   const dots = el("div.dots", {}, Array.from({ length: current.cardRoundTotal }, (_, i) =>
     el("span.dot" + (i < current.cardsDone ? ".done" : i === current.cardsDone ? ".active" : ""))));
 
+  const word = lang.word(item, settings.study);
   flip.append(
     el("div.flip__face", {},
       el("div.word-card", { onclick: turn },
-        el("div.word-card__en", {}, item.en),
+        el("div.word-card__en", {}, word),
         el("div.word-card__pos", {}, posLabel(item.pos)),
         el("div.word-card__hint", {}, "Нажмите, чтобы посмотреть перевод"))),
     el("div.flip__face.flip__face--back", {},
       el("div.word-card", { onclick: turn },
-        el("div.word-card__en", {}, item.en),
-        el("div.word-card__tr", {}, item.tr?.[lang] || "—", originBadge(item.src?.[lang])),
-        exampleBlock(item.exEn, item.exTr?.[lang]))));
+        el("div.word-card__en", {}, word),
+        el("div.word-card__tr", {}, lang.meaning(item, settings.lang) || "—",
+          originBadge(lang.origin(item, settings))),
+        exampleBlock(lang.example(item, settings.study), lang.example(item, settings.lang)))));
 
   attachSwipe(flip, { onLeft: repeat, onRight: known });
 

@@ -92,6 +92,31 @@ export function chooseAction({ title, text, options, extra }) {
   });
 }
 
+/** Экран загрузки для долгого дела: заголовок, полоса, строка состояния и отмена.
+    Сборка пакета идёт минуты, и всё это время должно быть видно, что происходит
+    и что процесс можно прервать. */
+export function progressModal({ title, text = "", cancelLabel = "Отмена" }) {
+  const box = document.getElementById("modal");
+  const fill = el("div.bar__fill", { style: "width:0%" });
+  const note = el("p.modal__text", {}, text);
+  const button = el("button.btn", { type: "button" }, cancelLabel);
+  clear(box).append(el("div.modal__box", {},
+    el("h2.modal__title", {}, title),
+    note,
+    el("div.bar", {}, fill),
+    el("div.modal__actions", { style: "margin-top:16px" }, button)));
+  box.hidden = false;
+  box.onclick = null;                       // случайный тап мимо не должен всё бросать
+  return {
+    set(value, message) {
+      fill.style.width = `${Math.round(Math.min(Math.max(value, 0), 1) * 100)}%`;
+      if (message) note.textContent = message;
+    },
+    onCancel(fn) { button.onclick = fn; },
+    close() { box.hidden = true; clear(box); },
+  };
+}
+
 export function todayISO(date = new Date()) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -134,15 +159,17 @@ export function shuffle(list) {
   return out;
 }
 
-/** Блок примера: два предложения, сворачиваются до двух строк, раскрываются по тапу. */
-export function exampleBlock(exEn, exTr) {
-  if (!exEn) return null;
+/** Блок примера: два предложения, сворачиваются до двух строк, раскрываются по тапу.
+    Совпавшие строки — это пара «английский → английский»: одно предложение,
+    показанное дважды, только занимало бы место. */
+export function exampleBlock(exStudy, exTr) {
+  if (!exStudy) return null;
   const block = el("div.example.example--clamped", {
     onclick: (e) => { e.stopPropagation(); block.classList.toggle("example--clamped"); },
     title: "Нажмите, чтобы раскрыть",
   },
-    el("div.example__en", {}, exEn),
-    exTr ? el("div.example__tr", {}, exTr) : null);
+    el("div.example__en", {}, exStudy),
+    exTr && exTr !== exStudy ? el("div.example__tr", {}, exTr) : null);
   return block;
 }
 

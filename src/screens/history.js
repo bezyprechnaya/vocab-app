@@ -5,6 +5,7 @@
 import { el, formatDate, plural, confirmAction, toast } from "../ui.js";
 import * as session from "../session.js";
 import * as settingsStore from "../settings.js";
+import * as lang from "../lang.js";
 
 export const title = (params) => (params.date ? formatDate(params.date) : "История");
 
@@ -69,8 +70,8 @@ async function renderDay(ctx) {
       el("div.row__sub", {}, day.phase === "done" ? "День закрыт" : "День не закончен"),
       el("div.words-list", { style: "margin-top:10px" }, items.length
         ? items.map((item) => el("div.word-row", {},
-            el("span.word-row__en", {}, item.en),
-            el("span.word-row__tr", {}, item.tr?.[settings.lang] || "—")))
+            el("span.word-row__en", {}, lang.word(item, settings.study)),
+            el("span.word-row__tr", {}, lang.meaning(item, settings.lang) || "—")))
         : el("p.muted", {}, "Набор пуст — все слова оказались знакомыми.")),
       el("div.actions", {},
         el("button.btn", {

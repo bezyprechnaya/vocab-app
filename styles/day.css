@@ -61,6 +61,9 @@
   overflow: hidden;
 }
 
+/* Место под пример на этапе проверки: появляется вместе с подсказкой. */
+.example-slot { width: 100%; }
+
 .badge-mt {
   display: inline-block;
   margin-left: 6px;

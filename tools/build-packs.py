@@ -477,8 +477,11 @@ def build(args):
         src = overrides.get((item["en"], item["pos"]), {})
         tr = src.get("tr", "")
         origin = "ok" if tr else "mt"
-        if not tr:
-            tr = translator.get(item["en"]) if translator else item["definition"]
+        if not tr and mono:
+            tr = item["definition"]
+            origin = "ok"          # определение из словаря — это не машинный перевод
+        elif not tr:
+            tr = translator.get(item["en"])
         ex_tr = src.get("ex_tr", "")
         if item["ex_en"] and not ex_tr:
             if mono:

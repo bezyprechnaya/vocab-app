@@ -4,7 +4,8 @@ import * as db from "./db.js";
 
 const DEFAULTS = {
   id: "app",
-  lang: "ru",          // активный язык перевода
+  study: "en",         // язык, который изучаем: лицевая сторона карточки
+  lang: "ru",          // язык перевода: оборот карточки
   level: "b1",         // активный уровень слов
   onboarded: false,    // онбординг пройден
   wordsPerDay: 10,
