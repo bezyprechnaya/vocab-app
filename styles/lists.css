@@ -19,8 +19,8 @@
 }
 .row--static { cursor: default; }
 .row__body { flex: 1; min-width: 0; }
-.row__title { font-weight: 600; }
-.row__sub { color: var(--muted); font-size: 13px; }
+.row__title { display: block; font-weight: 600; }
+.row__sub { display: block; color: var(--muted); font-size: 13px; }
 .row__side { flex: none; display: flex; align-items: center; gap: 8px; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }

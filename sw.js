@@ -11,6 +11,10 @@
 const VERSION = "2026-09-04.1";
 const CACHE = `vocab-${VERSION}`;
 
+// На локальном сервере разработки кэш только мешает: правка файла должна быть видна
+// с первой перезагрузки. Поэтому там работаем «сначала сеть», а кэш держим запасным.
+const DEV = ["localhost", "127.0.0.1"].includes(self.location.hostname);
+
 const SHELL = [
   "./",
   "./index.html",
@@ -45,8 +49,10 @@ const SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
-    const cache = await caches.open(CACHE);
-    await cache.addAll(SHELL.map((path) => new URL(path, self.registration.scope)));
+    if (!DEV) {
+      const cache = await caches.open(CACHE);
+      await cache.addAll(SHELL.map((path) => new URL(path, self.registration.scope)));
+    }
     await self.skipWaiting();
   })());
 });
@@ -75,9 +81,10 @@ self.addEventListener("fetch", (event) => {
       return response;
     }).catch(() => null);
 
-    if (cached) return cached;                        // сначала кэш
+    if (cached && !DEV) return cached;                // сначала кэш
     const fresh = await network;                      // обновление в фоне
     if (fresh) return fresh;
+    if (cached) return cached;                        // в разработке — кэш как запасной
     if (request.mode === "navigate") {
       const shell = await cache.match(new URL("./index.html", self.registration.scope));
       if (shell) return shell;

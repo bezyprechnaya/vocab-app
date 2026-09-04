@@ -20,8 +20,8 @@
 
 .hub__icon { font-size: 22px; width: 28px; text-align: center; flex: none; }
 .hub__body { flex: 1; min-width: 0; }
-.hub__name { font-weight: 600; }
-.hub__state { color: var(--muted); font-size: 13px; }
+.hub__name { display: block; font-weight: 600; }
+.hub__state { display: block; color: var(--muted); font-size: 13px; }
 .hub__chev { color: var(--muted); font-size: 22px; flex: none; }
 .hub__item--done .hub__state { color: var(--good); }
 

@@ -41,8 +41,10 @@ export async function render(ctx) {
   }
 
   // ── активный язык ────────────────────────────────────────────────────
-  const langs = [...new Set(catalog.map((p) => p.lang))];
-  if (!langs.includes(settings.lang)) langs.unshift(settings.lang);
+  // Показываем все языки первой очереди, даже если пакеты для них ещё не собраны:
+  // иначе о такой возможности нельзя догадаться.
+  const langs = [...new Set([...Object.keys(packs.LANG_NAMES),
+    ...catalog.map((p) => p.lang), settings.lang])];
 
   screen.append(el("h2.section-title", {}, "Язык перевода"));
   screen.append(el("div.chips", {}, langs.map((lang) =>
@@ -50,7 +52,11 @@ export async function render(ctx) {
       type: "button",
       onclick: async () => {
         await settingsStore.patch({ lang });
-        toast("Язык переключён. Прогресс сохранён — он не привязан к языку.");
+        const ready = [...installed.values()].some((pack) => pack.lang === lang);
+        toast(ready
+          ? "Язык переключён. Прогресс сохранён — он не привязан к языку."
+          : "Язык переключён, но пакетов для него нет: переводы будут пустыми, "
+            + "пока не загрузите пакет.");
         ctx.refresh();
       },
     }, packs.LANG_NAMES[lang] || lang.toUpperCase()))));
@@ -69,7 +75,9 @@ export async function render(ctx) {
   screen.append(el("h2.section-title", {}, "Пакеты"));
   if (!mine.length) {
     screen.append(el("div.card", {}, el("p.muted", {},
-      "Для этого языка пакетов пока нет. Их собирает tools/build-packs.py.")));
+      "Для этого языка пакеты ещё не собраны. Их готовит tools/build-packs.py — "
+      + "например: python3 tools/build-packs.py --lang "
+      + `${settings.lang} --level all.`)));
   }
 
   for (const entry of mine) {
