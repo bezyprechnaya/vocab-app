@@ -4,7 +4,7 @@ import * as db from "./db.js";
 import * as nav from "./nav.js";
 import * as packsStore from "./packs.js";
 import * as settingsStore from "./settings.js";
-import { el, toast } from "./ui.js";
+import { el, toast, applyTheme } from "./ui.js";
 
 async function boot() {
   const root = document.getElementById("app");
@@ -30,6 +30,7 @@ async function boot() {
   }
 
   const settings = await settingsStore.get();
+  applyTheme(settings.theme);
   if (!settings.onboarded && !location.hash.startsWith("#/help")) {
     location.replace("#/onboarding");
   }

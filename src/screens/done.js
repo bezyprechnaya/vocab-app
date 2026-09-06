@@ -1,26 +1,27 @@
-/* День закрыт: итог и список того, что выучено. Набор дня больше не меняется. */
+/* День закрыт: итог и список того, что закрыто. Набор дня больше не меняется.
 
-import { el, plural, formatDate } from "../ui.js";
-import * as session from "../session.js";
+   Счёт двойной — новое и уже знакомое считаются порознь (`screens/summary.js`),
+   поэтому «10 новых + 6 знакомых» видно и в цифрах, и в самом списке. */
+
+import { el, formatDate } from "../ui.js";
 import * as settingsStore from "../settings.js";
-import * as lang from "../lang.js";
+import * as summary from "./summary.js";
 
 export async function render(ctx, current) {
   const settings = await settingsStore.get();
-  const items = await session.items(current.daySet);
+  const parts = await summary.split(current);
 
   return el("div.day", {},
     el("div.done-hero", {},
       el("div.done-hero__mark", {}, "✓"),
       el("h2.done-hero__title", {}, "Готово на сегодня"),
-      el("p.muted", {}, `${formatDate(current.date)} · `
-        + plural(current.learnedToday || 0, "запись", "записи", "записей") + " закрыто")),
+      el("p.muted.done-hero__date", {}, formatDate(current.date))),
 
-    items.length
-      ? el("div.words-list", {}, items.map((item) => el("div.word-row", {},
-          el("span.word-row__en", {}, lang.word(item, settings.study)),
-          el("span.word-row__tr", {}, lang.meaning(item, settings.lang) || "—"))))
-      : el("p.muted.center", {}, "Все слова набора оказались знакомыми."),
+    parts.total
+      ? summary.tally(parts)
+      : el("p.muted.center", {}, "Сегодня закрывать было нечего."),
+
+    parts.total ? summary.wordList(parts, settings) : null,
 
     el("div.actions", {},
       el("button.btn", {

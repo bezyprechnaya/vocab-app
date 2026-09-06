@@ -1,9 +1,16 @@
 /* Хаб — стартовый экран. У каждого пункта видно состояние, чтобы попасть
-   в нужное место одним нажатием (глава I, 3.1). */
+   в нужное место одним нажатием (глава I, 3.1).
 
-import { el, plural, formatDate } from "../ui.js";
+   Чему учусь — флаг и уровень в углу панели: это подпись ко всему экрану,
+   а не пункт списка. Карточка под ней отвечает на два оставшихся вопроса:
+   насколько продвинулся (полоса) и не разорвана ли привычка (стрик).
+   «Выучено» и «в базе» — две точки одной шкалы, поэтому они стоят не порознь,
+   а по краям полосы. */
+
+import { el, plural, setTopbarMark } from "../ui.js";
 import * as session from "../session.js";
 import * as progress from "../progress.js";
+import * as packs from "../packs.js";
 import * as settingsStore from "../settings.js";
 
 export const title = "VOCAB";
@@ -21,12 +28,34 @@ function hubItem({ icon, name, state, hash, navigate, done, disabled }) {
     el("span.hub__chev", {}, "›"));
 }
 
+/** Карточка прогресса: полоса, шкала под ней и стрик. Над полосой пусто —
+    что именно учится, сказано флагом и уровнем в углу панели. */
+function header({ totals, streak, closedDays }) {
+  const share = totals.items ? totals.learned / totals.items : 0;
+
+  return el("div.card.overview", {},
+    el("div.bar", {},
+      el("div.bar__fill", { style: `width:${Math.round(share * 100)}%` })),
+
+    el("div.overview__scale", {},
+      el("span", {}, `Выучено ${totals.learned}`),
+      el("span.muted", {}, `из ${totals.items} в базе`)),
+
+    el("div.overview__streak", {},
+      el("span.overview__fire", {}, streak ? "🔥" : "·"),
+      el("span", {}, streak
+        ? plural(streak, "день подряд", "дня подряд", "дней подряд")
+        : closedDays
+          ? "Стрик прервался — закройте день, чтобы начать заново"
+          : "Стрик начнётся с первого закрытого дня")));
+}
+
 export async function render({ navigate }) {
-  const [words, phrasal, totals, days, settings] = await Promise.all([
+  const [words, phrasal, totals, streak, settings] = await Promise.all([
     session.stateLine("words"),
     session.stateLine("phrasal"),
     progress.totals(),
-    session.history(),
+    session.streak(),
     settingsStore.get(),
   ]);
 
@@ -34,15 +63,17 @@ export async function render({ navigate }) {
   const endlessLevel = await session.pickLevel("words", settings.level, settings);
   const endlessStats = endlessLevel ? await progress.levelStats("words", endlessLevel) : null;
 
-  const closed = days.filter((d) => d.phase === "done");
-  const lastClosed = closed[0];
+  const closed = (await session.history()).filter(session.isDone);
 
   const screen = el("div.hub");
 
-  screen.append(el("div.card.stats", {},
-    el("div", {}, el("div.stats__num", {}, totals.learned), el("div.stats__label", {}, "выучено")),
-    el("div", {}, el("div.stats__num", {}, closed.length), el("div.stats__label", {}, "закрытых дней")),
-    el("div", {}, el("div.stats__num", {}, totals.items), el("div.stats__label", {}, "в базе"))));
+  // Флаг и уровень — в левом углу панели: на хабе кнопки «назад» нет, угол свободен.
+  setTopbarMark([
+    el("span.topbar__flag", {}, packs.langFlag(settings.study)),
+    el("span.topbar__level", {}, settings.level.toUpperCase()),
+  ]);
+
+  screen.append(header({ totals, streak, closedDays: closed.length }));
 
   screen.append(
     hubItem({ icon: "📘", name: "Слова дня", state: words.text, done: words.done,
@@ -55,24 +86,17 @@ export async function render({ navigate }) {
         : "Нет загруженных слов",
       disabled: !endlessStats,
       hash: "#/endless/words", navigate }),
-    hubItem({ icon: "🗓", name: "История",
-      state: closed.length ? plural(closed.length, "закрытый день", "закрытых дня", "закрытых дней")
+    // Повторение живёт внутри истории: день выбирается там же, где и виден.
+    hubItem({ icon: "🗓", name: "История и повторение",
+      state: closed.length
+        ? plural(closed.length, "закрытый день", "закрытых дня", "закрытых дней")
         : "Пока пусто",
       hash: "#/history", navigate }),
-    hubItem({ icon: "🔁", name: "Повторить",
-      state: lastClosed
-        ? `Последний день: ${formatDate(lastClosed.date)}`
-        : "Нет закрытых дней",
-      disabled: !lastClosed,
-      hash: lastClosed ? `#/review/${lastClosed.date}/${lastClosed.kind}` : "#/history",
-      navigate }),
     hubItem({ icon: "🌍", name: "Языки и уровни",
-      state: `${settings.study.toUpperCase()} → ${settings.lang.toUpperCase()}`
+      state: `${packs.langFlag(settings.study)} → ${packs.langFlag(settings.lang)}`
         + ` · уровень ${settings.level.toUpperCase()}`,
       hash: "#/packs", navigate }),
-    hubItem({ icon: "❓", name: "Как это работает", state: "Три этапа дня, пакеты, данные",
-      hash: "#/help", navigate }),
-    hubItem({ icon: "⚙️", name: "Настройки", state: "Размер дня, копия данных, удаление",
+    hubItem({ icon: "⚙️", name: "Настройки", state: "Размер дня, тема, копия данных",
       hash: "#/settings", navigate }));
 
   return screen;

@@ -8,7 +8,7 @@
    Пакеты (`packs/`) в кэш не кладём: после установки они лежат в IndexedDB,
    дублировать нечего. */
 
-const VERSION = "2026-09-04.4";
+const VERSION = "2026-09-06.2";
 const CACHE = `vocab-${VERSION}`;
 
 // На локальном сервере разработки кэш только мешает: правка файла должна быть видна
@@ -43,6 +43,7 @@ const SHELL = [
   "./src/screens/cards.js",
   "./src/screens/check.js",
   "./src/screens/done.js",
+  "./src/screens/summary.js",
   "./src/screens/history.js",
   "./src/screens/review.js",
   "./src/screens/packs.js",

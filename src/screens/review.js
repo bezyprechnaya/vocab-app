@@ -12,12 +12,13 @@ export const title = () => "Повторение";
 export async function render(ctx) {
   const { date, kind } = ctx.params;
   const day = await db.get("sessions", db.sessionKey(date, kind));
-  if (!day || !day.daySet.length) {
+  const closed = day ? session.closedIds(day) : [];
+  if (!closed.length) {
     return el("div.card", {}, el("p", {}, "Нечего повторять: набор этого дня пуст."));
   }
 
   const settings = await settingsStore.get();
-  const items = await session.items(day.daySet);
+  const items = await session.items(closed);
   if (!items.length) {
     return el("div.card", {},
       el("p", {}, "Слова этого дня больше не загружены."),

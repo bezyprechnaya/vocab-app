@@ -122,6 +122,30 @@ export function todayISO(date = new Date()) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/** Метка в левом углу верхней панели: флаг языка и уровень. На экране с кнопкой
+    «назад» её не бывает — угол один, и кнопка важнее. `null` убирает метку. */
+export function setTopbarMark(nodes) {
+  const box = document.getElementById("mark");
+  clear(box);
+  if (nodes) box.append(...[nodes].flat());
+  box.hidden = !nodes;
+}
+
+/** Соседний день в ISO: `shift` — сколько дней вперёд или назад. Дата собирается
+    через локальный Date, поэтому переход через месяц и год считает браузер. */
+export function shiftDate(iso, shift) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return todayISO(new Date(y, m - 1, d + shift));
+}
+
+/** Тема: `auto` отдаёт выбор системе, `light` и `dark` — фиксируют.
+    Атрибут на <html> перебивает медиазапрос, поэтому переключение мгновенное. */
+export function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === "light" || theme === "dark") root.setAttribute("data-theme", theme);
+  else root.removeAttribute("data-theme");
+}
+
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня",
   "июля", "августа", "сентября", "октября", "ноября", "декабря"];
 
@@ -134,6 +158,16 @@ export function formatDate(iso) {
   const now = new Date();
   const year = y === now.getFullYear() ? "" : ` ${y}`;
   return `${d} ${MONTHS[m - 1]}${year}`;
+}
+
+/** Счёт дня словами: «10 новых + 6 знакомых». Нуля в строке не бывает —
+    «+ 0 знакомых» это не факт о дне, а шум. */
+export function scoreLine({ fresh, known }) {
+  const left = plural(fresh, "новое", "новых", "новых");
+  const right = plural(known, "знакомое", "знакомых", "знакомых");
+  if (!known) return left;
+  if (!fresh) return right;
+  return `${left} + ${right}`;
 }
 
 export function plural(n, one, few, many) {

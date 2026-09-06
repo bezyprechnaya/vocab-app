@@ -12,6 +12,10 @@ import { applyChoice, langChips } from "../choose.js";
 
 export const title = () => "Знакомство";
 
+/* Уходить со знакомства некуда: назад — это к предыдущему шагу, а он и так
+   ниже кнопкой. Стрелка в панели только сбивала бы с толку. */
+export const noBack = true;
+
 const STEPS = [
   {
     mark: "📘",

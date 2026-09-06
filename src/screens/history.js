@@ -2,10 +2,10 @@
    День можно открыть, повторить или удалить; слова при удалении дня остаются
    выученными (глава I, 3.6). */
 
-import { el, formatDate, plural, confirmAction, toast } from "../ui.js";
+import { el, formatDate, scoreLine, confirmAction, toast } from "../ui.js";
 import * as session from "../session.js";
 import * as settingsStore from "../settings.js";
-import * as lang from "../lang.js";
+import * as summary from "./summary.js";
 
 export const title = (params) => (params.date ? formatDate(params.date) : "История");
 
@@ -44,7 +44,7 @@ async function renderList(ctx) {
         el("span.row__body", {},
           el("span.row__title", {}, meta?.title || day.kind),
           el("span.row__sub", {}, day.phase === "done"
-            ? plural(day.learnedToday || day.daySet.length, "запись", "записи", "записей") + " закрыто"
+            ? scoreLine(session.score(day))
             : `не закончен · ${PHASE_TEXT[day.phase] || day.phase}`)),
         el("span.row__chev.hub__chev", {}, "›")));
     }
@@ -64,18 +64,19 @@ async function renderDay(ctx) {
 
   for (const day of entries) {
     const meta = session.KINDS[day.kind];
-    const items = await session.items(day.daySet);
+    const parts = await summary.split(day);
+    const done = day.phase === "done";
     screen.append(el("div.card", {},
       el("div.row__title", {}, `${meta?.icon || "•"} ${meta?.title || day.kind}`),
-      el("div.row__sub", {}, day.phase === "done" ? "День закрыт" : "День не закончен"),
-      el("div.words-list", { style: "margin-top:10px" }, items.length
-        ? items.map((item) => el("div.word-row", {},
-            el("span.word-row__en", {}, lang.word(item, settings.study)),
-            el("span.word-row__tr", {}, lang.meaning(item, settings.lang) || "—")))
-        : el("p.muted", {}, "Набор пуст — все слова оказались знакомыми.")),
+      el("div.row__sub", {}, done ? "День закрыт" : "День не закончен"),
+      parts.total
+        ? el("div", { style: "margin-top:12px" },
+            summary.tally(parts, { done }),
+            summary.wordList(parts, settings, { done }))
+        : el("p.muted", { style: "margin-top:10px" }, "Набор этого дня пуст."),
       el("div.actions", {},
         el("button.btn", {
-          type: "button", disabled: !items.length,
+          type: "button", disabled: !parts.total,
           onclick: () => ctx.navigate(`#/review/${day.date}/${day.kind}`),
         }, "Повторить"),
         el("button.btn.btn--danger", {

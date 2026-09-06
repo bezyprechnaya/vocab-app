@@ -27,8 +27,11 @@
   color-scheme: light dark;
 }
 
+/* Тёмные токены живут в одном месте, а применяются двумя путями: по системе —
+   пока человек не выбрал тему сам, и по атрибуту `data-theme` — когда выбрал.
+   Светлый выбор глушит медиазапрос, поэтому :not([data-theme="light"]). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #14171b;
     --surface: #1c2128;
     --surface-2: #262c34;
@@ -41,6 +44,23 @@
     --warn: #e0a458;
     --bad: #ef6b5b;
   }
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #14171b;
+  --surface: #1c2128;
+  --surface-2: #262c34;
+  --text: #e8ecf1;
+  --muted: #9aa5b1;
+  --line: #333b45;
+  --accent: #4c8dff;
+  --accent-text: #0b0f14;
+  --good: #4ac585;
+  --warn: #e0a458;
+  --bad: #ef6b5b;
 }
 
 * { box-sizing: border-box; }
@@ -111,8 +131,35 @@ html, body {
 
 .topbar__help { font-size: 19px; }
 
+/* Метка и «назад» делят левую ячейку: вместе они не появляются, а колонки
+   остаются симметричными — иначе заголовок съезжает из центра. Метка шире
+   ячейки и спокойно выходит за неё: заголовок короткий, места хватает. */
+.topbar__back, .topbar__mark { grid-column: 1; }
+.topbar__title { grid-column: 2; }
+.topbar__help { grid-column: 3; }
+
+.topbar__mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
+  height: var(--tap);
+  padding-left: 12px;
+  white-space: nowrap;
+}
+.topbar__flag { font-size: 20px; line-height: 1; }
+.topbar__level {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
 /* Скрытые кнопки панели остаются в сетке: иначе заголовок съезжает из центра. */
-.topbar__back[hidden], .topbar__help[hidden] { display: block; visibility: hidden; }
+.topbar__back[hidden], .topbar__help[hidden] { display: block !important; visibility: hidden; }
 
 /* ── Полотно экрана ─────────────────────────────────────────────────── */
 
@@ -151,6 +198,7 @@ html, body {
 }
 
 .muted { color: var(--muted); }
+.warn-note { color: var(--warn); }
 .center { text-align: center; }
 .grow { flex: 1; }
 .spacer { flex: 1 1 auto; min-height: 8px; }

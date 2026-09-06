@@ -2,7 +2,7 @@
    Разрушительные действия — только через подтверждение и с предложением
    сначала сделать экспорт. */
 
-import { el, plural, toast, confirmAction, chooseAction } from "../ui.js";
+import { el, plural, toast, confirmAction, chooseAction, applyTheme } from "../ui.js";
 import * as db from "../db.js";
 import * as backup from "../backup.js";
 import * as settingsStore from "../settings.js";
@@ -10,7 +10,16 @@ import * as progress from "../progress.js";
 
 export const title = () => "Настройки";
 
-const SIZES = [5, 10, 15, 20];
+/** Ряд размеров. Значение из старых настроек может не попасть в список —
+    показываем его отдельной кнопкой, иначе выбранного нет ни на одной. */
+function sizeRow(sizes, current, onPick) {
+  const options = sizes.includes(current) ? sizes : [...sizes, current].sort((a, b) => a - b);
+  return el("div.chips", { style: "margin-top:8px" }, options.map((n) =>
+    el("button.chip" + (current === n ? ".chip--on" : ""), {
+      type: "button",
+      onclick: () => onPick(n),
+    }, String(n))));
+}
 
 export async function render(ctx) {
   const settings = await settingsStore.get();
@@ -19,22 +28,43 @@ export async function render(ctx) {
   const screen = el("div.list");
 
   // ── размер дня ───────────────────────────────────────────────────────
+  // Слова и фразовые глаголы — два занятия одного дня, поэтому и потолок общий:
+  // выше пятнадцати набор перестаёт закрываться, а незакрытое возвращается в пул.
+  const total = settingsStore.dayTotal(settings);
+  const tooMuch = total > settingsStore.RECOMMENDED_TOTAL;
+
   screen.append(el("h2.section-title", {}, "Размер дня"));
   screen.append(el("div.card", {},
     el("div.row__title", {}, "Слов в день"),
-    el("div.chips", { style: "margin-top:8px" }, SIZES.map((n) =>
-      el("button.chip" + (settings.wordsPerDay === n ? ".chip--on" : ""), {
-        type: "button",
-        onclick: async () => { await settingsStore.patch({ wordsPerDay: n }); ctx.refresh(); },
-      }, String(n)))),
+    sizeRow(settingsStore.WORD_SIZES, settings.wordsPerDay,
+      async (n) => { await settingsStore.patch({ wordsPerDay: n }); ctx.refresh(); }),
     el("div.row__title", { style: "margin-top:14px" }, "Фразовых глаголов в день"),
-    el("div.chips", { style: "margin-top:8px" }, SIZES.map((n) =>
-      el("button.chip" + (settings.phrasalPerDay === n ? ".chip--on" : ""), {
-        type: "button",
-        onclick: async () => { await settingsStore.patch({ phrasalPerDay: n }); ctx.refresh(); },
-      }, String(n)))),
-    el("p.muted", { style: "margin:10px 0 0;font-size:13px" },
+    sizeRow(settingsStore.PHRASAL_SIZES, settings.phrasalPerDay,
+      async (n) => { await settingsStore.patch({ phrasalPerDay: n }); ctx.refresh(); }),
+    el("p" + (tooMuch ? ".warn-note" : ".muted"), { style: "margin:12px 0 0;font-size:13px" },
+      `Всего ${plural(total, "запись", "записи", "записей")} в день. `
+      + (tooMuch
+        ? `Рекомендуем не больше ${settingsStore.RECOMMENDED_TOTAL} в сумме: `
+          + "большой набор закрывается через раз, и прогресс идёт медленнее."
+        : `Рекомендуемый потолок — ${settingsStore.RECOMMENDED_TOTAL} в сумме.`)),
+    el("p.muted", { style: "margin:6px 0 0;font-size:13px" },
       "Новый размер применится к следующему дню — начатый день не меняется.")));
+
+  // ── тема ─────────────────────────────────────────────────────────────
+  screen.append(el("h2.section-title", {}, "Тема"));
+  screen.append(el("div.card", {},
+    el("div.chips", {}, settingsStore.THEMES.map((theme) =>
+      el("button.chip" + (settings.theme === theme.value ? ".chip--on" : ""), {
+        type: "button",
+        onclick: async () => {
+          // Тему применяем сразу: выбор должен быть виден до перерисовки экрана.
+          applyTheme(theme.value);
+          await settingsStore.patch({ theme: theme.value });
+          ctx.refresh();
+        },
+      }, theme.label))),
+    el("p.muted", { style: "margin:10px 0 0;font-size:13px" },
+      "«Как в системе» следует за настройкой телефона или браузера.")));
 
   // ── мои данные ───────────────────────────────────────────────────────
   screen.append(el("h2.section-title", {}, "Мои данные"));
@@ -87,9 +117,12 @@ export async function render(ctx) {
 
   screen.append(el("div.card", {},
     el("div.row__title", {}, "Копия данных"),
-    el("p.muted", { style: "margin:4px 0 10px;font-size:13px" },
+    el("p.muted", { style: "margin:4px 0 6px;font-size:13px" },
       `В базе: ${plural(totals.items, "запись", "записи", "записей")}, `
       + `выучено ${totals.learned}, дней в истории ${sessions}.`),
+    el("p.muted", { style: "margin:0 0 10px;font-size:13px" },
+      "Импорт принимает только .json: файл копии базы (такой делает «Экспорт») "
+      + "или файл-пакет вида packs/<язык>/<уровень>.json."),
     el("div.actions", { style: "margin-top:0" },
       el("button.btn", {
         type: "button",

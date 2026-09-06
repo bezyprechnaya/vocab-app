@@ -16,7 +16,7 @@
 import * as db from "./db.js";
 import * as progress from "./progress.js";
 import * as settingsStore from "./settings.js";
-import { shuffle, todayISO } from "./ui.js";
+import { shuffle, todayISO, shiftDate, scoreLine } from "./ui.js";
 import { LEVELS } from "./packs.js";
 
 export const KINDS = {
@@ -72,7 +72,7 @@ function empty(kind, date, level, size) {
     phase: "sort",
     cardQueue: [], cardRoundTotal: 0, cardsDone: 0, checkTarget: [],
     checkQueue: [], checkRoundTotal: 0, checkFailed: [],
-    knownCount: 0, learnedToday: 0, lastPresented: null,
+    knownIds: [], knownCount: 0, learnedToday: 0, lastPresented: null,
   };
 }
 
@@ -119,6 +119,9 @@ export async function answerSort(session, know) {
   if (!id) return afterSort(session);
   if (know) {
     await progress.mark(id, progress.LEARNED, session.date);
+    // Итог дня показывает всё, что закрыто, — значит знакомое надо запомнить
+    // поимённо, иначе список окажется короче собственного счётчика.
+    (session.knownIds ||= []).push(id);
     session.knownCount++;
     session.daySet = session.daySet.filter((x) => x !== id);
     await refill(session);
@@ -228,7 +231,7 @@ async function finish(session) {
 export async function stateLine(kind, date = todayISO()) {
   const session = await load(kind, date);
   if (session && session.phase === "done") {
-    return { done: true, text: `Сделано сегодня — ${session.learnedToday} записей` };
+    return { done: true, text: `Готово: ${scoreLine(score(session))}` };
   }
   if (session) {
     const left = session.phase === "sort"
@@ -249,6 +252,35 @@ export async function stateLine(kind, date = todayISO()) {
 export async function history() {
   const rows = await db.getAll("sessions");
   return rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+}
+
+/** Всё, что день закрыл: набор плюс знакомое, отсеянное на сортировке.
+    Старые дни писались без списка знакомого — там останется только набор. */
+export function closedIds(session) {
+  return [...(session.daySet || []), ...(session.knownIds || [])];
+}
+
+/** Счёт дня: сколько выучено с нуля и сколько отсеяно знакомым. Это разный труд —
+    новое прошло карточки и проверку, знакомое закрылось одним нажатием, — поэтому
+    день считается двумя числами и нигде не складывается в одно. */
+export function score(session) {
+  const fresh = (session.daySet || []).length;
+  const known = (session.knownIds || []).length;
+  return { fresh, known, total: fresh + known };
+}
+
+/** Стрик — сколько дней подряд закрыт хотя бы один день. Считаем от сегодня,
+    а если сегодня ещё не занимались — от вчера: день не кончился, рвать рано. */
+export async function streak(today = todayISO()) {
+  const closed = new Set((await history()).filter(isDone).map((day) => day.date));
+  if (!closed.size) return 0;
+  let cursor = closed.has(today) ? today : shiftDate(today, -1);
+  let days = 0;
+  while (closed.has(cursor)) {
+    days++;
+    cursor = shiftDate(cursor, -1);
+  }
+  return days;
 }
 
 export async function removeDay(id) {
