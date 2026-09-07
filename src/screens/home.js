@@ -4,8 +4,10 @@
    Чему учусь — флаг и уровень в углу панели: это подпись ко всему экрану,
    а не пункт списка. Карточка под ней отвечает на два оставшихся вопроса:
    насколько продвинулся (полоса) и не разорвана ли привычка (стрик).
-   «Выучено» и «в базе» — две точки одной шкалы, поэтому они стоят не порознь,
-   а по краям полосы. */
+   «Выучено» и «осталось» — две точки одной шкалы, поэтому они стоят не порознь,
+   а по краям полосы: слева пройденное, справа остаток пути. Считаются только
+   слова текущего уровня — соседние уровни и фразовые глаголы идут своим счётом
+   и о том, сколько осталось пройти здесь, ничего не говорят. */
 
 import { el, plural, setTopbarMark } from "../ui.js";
 import * as session from "../session.js";
@@ -30,16 +32,17 @@ function hubItem({ icon, name, state, hash, navigate, done, disabled }) {
 
 /** Карточка прогресса: полоса, шкала под ней и стрик. Над полосой пусто —
     что именно учится, сказано флагом и уровнем в углу панели. */
-function header({ totals, streak, closedDays }) {
-  const share = totals.items ? totals.learned / totals.items : 0;
+function header({ stats, level, streak, closedDays }) {
+  const share = stats.total ? stats.learned / stats.total : 0;
 
   return el("div.card.overview", {},
     el("div.bar", {},
       el("div.bar__fill", { style: `width:${Math.round(share * 100)}%` })),
 
     el("div.overview__scale", {},
-      el("span", {}, `Выучено ${totals.learned}`),
-      el("span.muted", {}, `из ${totals.items} в базе`)),
+      el("span", {}, `Выучено ${stats.learned}`),
+      el("span.muted", {}, `осталось ${stats.total - stats.learned}`
+        + ` на уровне ${level.toUpperCase()}`)),
 
     el("div.overview__streak", {},
       el("span.overview__fire", {}, streak ? "🔥" : "·"),
@@ -51,13 +54,15 @@ function header({ totals, streak, closedDays }) {
 }
 
 export async function render({ navigate }) {
-  const [words, phrasal, totals, streak, settings] = await Promise.all([
+  const [words, phrasal, streak, settings] = await Promise.all([
     session.stateLine("words"),
     session.stateLine("phrasal"),
-    progress.totals(),
     session.streak(),
     settingsStore.get(),
   ]);
+
+  // Шкала — про выбранный уровень, поэтому считаем слова только его.
+  const levelTotals = await progress.levelStats("words", settings.level);
 
   // Бесконечный режим идёт по тому же пулу, что и день: покажем, сколько там осталось.
   const endlessLevel = await session.pickLevel("words", settings.level, settings);
@@ -73,7 +78,7 @@ export async function render({ navigate }) {
     el("span.topbar__level", {}, settings.level.toUpperCase()),
   ]);
 
-  screen.append(header({ totals, streak, closedDays: closed.length }));
+  screen.append(header({ stats: levelTotals, level: settings.level, streak, closedDays: closed.length }));
 
   screen.append(
     hubItem({ icon: "📘", name: "Слова дня", state: words.text, done: words.done,

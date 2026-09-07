@@ -6,12 +6,26 @@ import * as packsStore from "./packs.js";
 import * as settingsStore from "./settings.js";
 import { el, toast, applyTheme } from "./ui.js";
 
+/** Стартовый экран: строка состояния и полоса. Первый запуск ставит пакеты
+    из папки `packs/`, а это секунды записи в базу — без полосы экран выглядел бы
+    зависшим. Полоса живёт до первого экрана и уходит вместе с ним. */
+function bootScreen(root) {
+  const fill = el("div.bar__fill", { style: "width:0%" });
+  const note = el("p.muted.center", {}, "Открываем базу…");
+  root.append(el("div.card", {}, note, el("div.bar", {}, fill)));
+  return (value, message) => {
+    fill.style.width = `${Math.round(Math.min(Math.max(value, 0), 1) * 100)}%`;
+    if (message) note.textContent = message;
+  };
+}
+
 async function boot() {
   const root = document.getElementById("app");
-  root.append(el("p.muted.center", {}, "Открываем базу…"));
+  const step = bootScreen(root);
 
   try {
     await db.open();
+    step(0.05);
   } catch (error) {
     root.textContent = "";
     root.append(el("div.card", {},
@@ -23,7 +37,9 @@ async function boot() {
   }
 
   try {
-    const starters = await packsStore.ensureStarter();
+    const starters = await packsStore.ensureStarter((value, label) =>
+      step(0.05 + value * 0.95, label ? `Ставим пакет: ${label}` : undefined));
+    step(1);
     if (starters.length) toast(`Установлены стартовые пакеты: ${starters.length}`);
   } catch (error) {
     console.warn("стартовые пакеты не установились:", error);

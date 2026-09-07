@@ -108,26 +108,37 @@ function toItem(existing, row, pack) {
   return item;
 }
 
-/** Скачать и установить пакет. onProgress(0…1) — для полосы загрузки. */
+/** Скачать и установить пакет. onProgress(0…1) — для полосы загрузки.
+
+    Долгая часть — не скачивание, а запись: записи кладутся по одной, и пакет
+    на полторы тысячи слов пишется секундами. Поэтому файл занимает первую
+    десятую полосы, а остальное отдано записи, которая двигает её сама. */
 export async function install(entry, onProgress = () => {}) {
-  onProgress(0.05);
+  onProgress(0.02);
   const response = await fetch(packUrl(entry.path), { cache: "no-cache" });
   if (!response.ok) throw new Error(`не удалось скачать пакет (${response.status})`);
   const pack = validate(await response.json());
-  onProgress(0.5);
-  await write(pack, entry.bytes);
+  onProgress(0.1);
+  await write(pack, entry.bytes, (value) => onProgress(0.1 + value * 0.9));
   onProgress(1);
   return pack;
 }
 
-/** Запись разобранного пакета в базу. Прогресс не трогаем — он в своём сторе. */
-export async function write(pack, bytes = 0) {
+/** Запись разобранного пакета в базу. Прогресс не трогаем — он в своём сторе.
+    `onProgress(0…1)` — доля записанного: без неё полоса стоит всю установку. */
+export async function write(pack, bytes = 0, onProgress = () => {}) {
   validate(pack);
+  const total = pack.items.length;
   await db.transact(["items", "packs"], "readwrite", async (s) => {
+    let done = 0;
     for (const row of pack.items) {
       const id = db.itemKey(row[0], row[1]);
       const existing = await db.request(s.items.get(id));
       s.items.put(toItem(existing, row, pack));
+      done++;
+      // Каждую запись рисовать незачем: полоса и так двигается на глаз,
+      // а лишняя перерисовка внутри транзакции только замедляет её.
+      if (done % 25 === 0 || done === total) onProgress(done / total);
     }
     s.packs.put({
       id: db.packKey(pack.lang, pack.level),
@@ -273,8 +284,13 @@ export async function apply(changes, onProgress = () => {}) {
   return { settings, added, missing };
 }
 
-/** Первый запуск: ставим пакеты, лежащие в репозитории, — приложению есть что показать. */
-export async function ensureStarter() {
+/** Первый запуск: ставим пакеты, лежащие в репозитории, — приложению есть что показать.
+
+    `onProgress(0…1, подпись)` — для полосы на стартовом экране: установка идёт
+    секундами, и всё это время должно быть видно, что происходит, а не «Открываем
+    базу…» на замершем экране. Пакеты весят по-разному, поэтому доля считается
+    по числу записей: делить полосу поровну значило бы врать про остаток. */
+export async function ensureStarter(onProgress = () => {}) {
   const have = await installed();
   if (have.size) return [];
   const settings = await settingsStore.get();
@@ -282,7 +298,15 @@ export async function ensureStarter() {
   const langs = needed(settings);
   const starters = list.filter((p) => langs.includes(p.lang)
     && (p.level === settings.level || p.level === "phrasal"));
-  for (const entry of starters) await install(entry);
+  const total = starters.reduce((sum, p) => sum + (p.count || 1), 0) || 1;
+  let done = 0;
+  for (const entry of starters) {
+    const weight = entry.count || 1;
+    const label = `${LANG_NAMES[entry.lang] || entry.lang.toUpperCase()} · ${levelLabel(entry.level)}`;
+    onProgress(done / total, label);
+    await install(entry, (value) => onProgress((done + value * weight) / total, label));
+    done += weight;
+  }
   return starters;
 }
 
