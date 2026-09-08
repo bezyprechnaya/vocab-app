@@ -1,57 +1,153 @@
 /* Три этапа дня: сортировка, карточки, проверка. Один набор стилей на слова
-   и фразовые глаголы — движок дня общий. */
+   и фразовые глаголы — движок дня общий.
+
+   Карточка здесь — единственное, на что смотрят, поэтому вокруг неё пусто,
+   а внутри слово набрано антиквой в тот размер, какой позволяет карточка.
+   Перевод, пример и подсказка идут ниже волосяной черты — тем же порядком,
+   что в наборной странице: слово, значение, цитата. */
 
 .day { display: flex; flex-direction: column; flex: 1; gap: var(--gap); }
+
+/* Размер снят с эталона: 518 × 308 CSS-пикселей, то есть примерно 5 : 3.
+   Карточка крупнее и шире прежней «настоящей» 88 × 63 мм — панелью она от
+   этого не становится, потому что вокруг остаётся поле, а вытянутая сторона
+   идёт содержимому на пользу: слово, перевод и пример — строки, а строке
+   нужна ширина, а не высота.
+
+   Ширина выбирается по трём ограничениям сразу: не шире полотна, не крупнее
+   эталона и не выше примерно 58 % экрана — последнее держит её целиком в
+   кадре на низких экранах. Вторая строка `--card-w` — рабочая, первая
+   остаётся браузерам без `svh`: там второе объявление отбрасывается целиком.
+
+   Ширина полотна посчитана здесь, а не взята процентами, потому что от неё
+   считается высота: процент в `min-height` меряется по высоте родителя, а не
+   по ширине, и пропорция бы поехала. По той же причине высота задана
+   минимумом, а не `aspect-ratio`: при заданной пропорции высота берётся из
+   неё, и карточка не выросла бы под длинный перевод, а он бы вылез за рамку.
+   Оценка полотна нарочно с запасом вниз — `max-width: 100%` у карточки
+   страхует, если поля окажутся шире расчёта. */
+.day {
+  --canvas: calc(min(100vw, 760px) - 2 * max(var(--gap), var(--safe-left), var(--safe-right)));
+  --card-w: min(var(--canvas), 518px);
+  --card-w: min(var(--canvas), 518px, 97svh);
+  --card-h: calc(var(--card-w) * 308 / 518);
+}
 
 .day__head {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  color: var(--muted);
-  font-size: 13px;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
 }
 
 .word-card {
-  flex: 1;
+  /* `margin: auto` в колонке ставит карточку по центру свободного поля.
+     Высота задана минимумом: карточка держит пропорцию, пока текст в неё
+     умещается, и вырастает, когда его больше, — на проверке подсказка
+     раскрывает перевод и пример уже после того, как карточка нарисована. */
+  container-type: inline-size;
+  flex: none;
+  margin: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 200px;
-  padding: 20px 16px;
+  gap: 9px;
+  width: var(--card-w);
+  max-width: 100%;
+  min-height: var(--card-h);
+  padding: 16px 26px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
   text-align: center;
-  animation: appear .18s ease-out;
+  animation: card-in .45s cubic-bezier(.2, .8, .2, 1) both;
 }
 
-@keyframes appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* Строки внутри карточки не сжимаются. Карточка — колоночный флекс, и по
+   умолчанию содержимое ужимается по высоте: перевод из двух строк расплющивало
+   бы вместо того, чтобы раздвинуть карточку. Запрет на сжатие возвращает
+   обычный порядок — лишняя строка добавляет карточке высоты. */
+.word-card > * { flex: none; }
+
+@keyframes card-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 .word-card__en {
-  font-size: clamp(24px, 7vw, 34px);
-  font-weight: 700;
-  line-height: 1.15;
+  font-family: var(--font-serif);
+  font-size: clamp(24px, 11cqw, 40px);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
   overflow-wrap: anywhere;
 }
-.word-card__pos { color: var(--muted); font-size: 14px; }
-.word-card__tr { font-size: clamp(18px, 5.5vw, 24px); color: var(--accent); overflow-wrap: anywhere; }
-.word-card__hint { color: var(--muted); font-size: 13px; }
 
-/* Пример: не ломает 320 px, сворачивается до трёх строк с раскрытием по тапу. */
+.word-card__pos {
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+/* Перевод отделён от слова волосяной чертой: она короткая и по центру —
+   не разрез карточки, а пауза между строкой и её значением. */
+.word-card__tr {
+  position: relative;
+  margin-top: 6px;
+  padding-top: 18px;
+  font-size: clamp(16px, 5.5cqw, 21px);
+  font-weight: 500;
+  letter-spacing: .01em;
+  color: var(--lux-700);
+  overflow-wrap: anywhere;
+  animation: card-in .4s cubic-bezier(.2, .8, .2, 1) both;
+}
+.word-card__tr::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 56px;
+  height: 1px;
+  margin-left: -28px;
+  background: var(--line-strong);
+}
+
+.word-card__hint {
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+/* Пример: не ломает 320 px, сворачивается до двух строк с раскрытием по тапу.
+   Исходная фраза — курсивной антиквой, как цитата; перевод под ней тише. */
 .example {
   width: 100%;
-  margin-top: 6px;
-  padding-top: 10px;
+  max-width: 460px;
+  margin-top: 8px;
+  padding-top: 12px;
   border-top: 1px solid var(--line);
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: 15px;
+  line-height: 1.45;
   overflow-wrap: break-word;
   cursor: pointer;
 }
-.example__en { color: var(--text); }
-.example__tr { color: var(--muted); margin-top: 2px; }
+.example__en {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--lux-700);
+}
+.example__tr { color: var(--faint); margin-top: 6px; font-size: 13px; }
 .example--clamped .example__en,
 .example--clamped .example__tr {
   display: -webkit-box;
@@ -62,26 +158,42 @@
 }
 
 /* Место под пример на этапе проверки: появляется вместе с подсказкой. */
-.example-slot { width: 100%; }
+.example-slot { width: 100%; display: flex; justify-content: center; }
 
 .badge-mt {
   display: inline-block;
-  margin-left: 6px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--muted);
-  font-size: 11px;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  color: var(--faint);
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
   vertical-align: middle;
   cursor: help;
 }
 
-/* Карточка-переворот */
-.flip { perspective: 1000px; flex: 1; display: flex; }
+/* Карточка-переворот. Ширину задаёт обёртка, а высоту — сама карточка: правило
+   `.word-card` держит пропорцию 518 × 308 и разрешает вырасти выше неё, когда
+   перевод переносится на вторую строку. Высоту коробки задаёт оборотная грань:
+   она единственная лежит в потоке, и на ней всё, что длиннее лица, — перевод
+   и пример. Лицевая грань накрывает её абсолютом и растягивается до той же
+   высоты, поэтому переворот не меняет размера. Перспектива нарочно дальняя:
+   при близкой точке схода карточка на полпути уезжает за края полотна. */
+.flip {
+  perspective: 2400px;
+  flex: none;
+  margin: auto;
+  display: flex;
+  width: var(--card-w);
+  max-width: 100%;
+}
 .flip__inner {
   position: relative;
   flex: 1;
-  transition: transform .4s;
+  transition: transform .55s cubic-bezier(.2, .8, .2, 1);
   transform-style: preserve-3d;
 }
 .flip__inner.flipped { transform: rotateY(180deg); }
@@ -92,14 +204,35 @@
   -webkit-backface-visibility: hidden;
   display: flex;
 }
-.flip__face--back { transform: rotateY(180deg); }
+.flip__face--back { position: relative; transform: rotateY(180deg); }
+/* Внутри переворота карточка занимает грань целиком, а `margin: auto` ей уже
+   не нужен — по центру её ставит обёртка. Своя анимация въезда тоже лишняя:
+   карточка въезжает вместе с гранью. */
+.flip .word-card {
+  width: 100%;
+  margin: 0;
+  animation: none;
+}
+.flip .word-card__tr { animation: none; }
 
-.dots { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--surface-2); }
-.dot.done { background: var(--good); }
-.dot.active { background: var(--accent); transform: scale(1.3); }
+/* Шкала круга: не точки, а засечки — тот же прямой угол, что у всего остального. */
+.dots { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.dot { width: 18px; height: 2px; background: var(--line); transition: background-color .4s ease; }
+.dot.done { background: var(--lux-500); }
+.dot.active { background: var(--accent); }
 
-.done-hero { text-align: center; padding: 24px 0 12px; }
-.done-hero__date { margin: 0; }
-.done-hero__mark { font-size: 44px; }
-.done-hero__title { margin: 8px 0 4px; font-size: 22px; }
+.done-hero { text-align: center; padding: 32px 0 8px; }
+.done-hero__mark { color: var(--faint); }
+.done-hero__mark svg { width: 34px; height: 34px; }
+.done-hero__title { margin: 16px 0 6px; font-size: 30px; }
+.done-hero__date {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 600px) {
+  .word-card { padding: 28px 36px; }
+}

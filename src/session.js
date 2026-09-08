@@ -20,8 +20,8 @@ import { shuffle, todayISO, shiftDate, scoreLine } from "./ui.js";
 import { LEVELS } from "./packs.js";
 
 export const KINDS = {
-  words: { title: "Слова дня", short: "Слова", icon: "📘", route: "#/day/words" },
-  phrasal: { title: "Фразовые глаголы", short: "Фразовые", icon: "🔗", route: "#/day/phrasal" },
+  words: { title: "Слова дня", short: "Слова", icon: "book", route: "#/day/words" },
+  phrasal: { title: "Фразовые глаголы", short: "Фразовые", icon: "link", route: "#/day/phrasal" },
 };
 
 export const PHASES = ["sort", "cards", "check", "done"];

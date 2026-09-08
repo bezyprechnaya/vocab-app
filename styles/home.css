@@ -1,51 +1,187 @@
-/* Экран-хаб: список действий с состоянием у каждого. */
+/* Экран-хаб: заголовок, крупная карточка главного режима, два спутника
+   и спокойный список всего остального.
 
-.hub { display: flex; flex-direction: column; gap: 10px; }
+   Вес на экране распределён так же, как внимание: «Слова дня» — это то, зачем
+   приложение открывают, поэтому карточка широкая и с полосой прогресса внутри.
+   Фразовые и бесконечный — два равных спутника рядом. История, языки
+   и настройки заходят реже: им хватает строки с тонкой линией. */
 
-.hub__item {
+.home { display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Шапка ──────────────────────────────────────────────────────────── */
+
+.home__head {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.home__title {
+  margin: 0 0 10px;
+  font-size: clamp(32px, 9vw, 44px);
+  line-height: 1.05;
+}
+
+.home__meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.home__meta-item { display: inline-flex; align-items: center; gap: 6px; }
+.home__dot { width: 3px; height: 3px; background: var(--line-strong); }
+.home__meta .icon svg { width: 14px; height: 14px; }
+
+/* ── Главная карточка ───────────────────────────────────────────────── */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 28px;
   width: 100%;
-  min-height: 64px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
+  min-height: 210px;
+  padding: 22px;
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--surface);
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition: background-color .45s ease, color .45s ease, border-color .45s ease;
 }
 
-.hub__icon { font-size: 22px; width: 28px; text-align: center; flex: none; }
-.hub__body { flex: 1; min-width: 0; }
-.hub__name { display: block; font-weight: 600; }
-.hub__state { display: block; color: var(--muted); font-size: 13px; }
-.hub__chev { color: var(--muted); font-size: 22px; flex: none; }
-.hub__item--done .hub__state { color: var(--good); }
+@media (hover: hover) {
+  .hero:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+}
+.hero:active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 
-/* Шапка хаба: полоса прогресса со шкалой и стрик. Что именно учится, написано
-   флагом и уровнем в углу верхней панели — здесь над полосой пусто. */
+.hero__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 
-.overview { display: flex; flex-direction: column; gap: 10px; }
+.hero__label {
+  margin-bottom: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  opacity: .6;
+}
 
-.overview__scale {
+.hero__title { margin: 0; font-size: 30px; }
+.hero__state { margin-top: 6px; font-size: 14px; opacity: .75; }
+.hero__icon { opacity: .45; }
+.hero__icon svg { width: 26px; height: 26px; }
+
+.hero__foot { display: flex; flex-direction: column; gap: 10px; }
+
+.hero__scale {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  opacity: .75;
 }
-.overview__scale .muted { font-weight: 400; }
 
-.overview__streak {
+/* Полоса внутри карточки живёт на её фоне: на светлом — чернильная на бумаге,
+   на тёмном (наведение, нажатие) — бумажная на чернильном. */
+.hero .bar { background: var(--line); transition: background-color .45s ease; }
+.hero .bar__fill { background: var(--accent); transition: background-color .45s ease, width .7s cubic-bezier(.2, .8, .2, 1); }
+@media (hover: hover) {
+  .hero:hover .bar { background: var(--lux-700); }
+  .hero:hover .bar__fill { background: var(--accent-text); }
+}
+.hero:active .bar { background: var(--lux-700); }
+.hero:active .bar__fill { background: var(--accent-text); }
+
+/* ── Два спутника ───────────────────────────────────────────────────── */
+
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 140px;
+  padding: 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .45s ease, color .45s ease, border-color .45s ease;
+}
+
+@media (hover: hover) {
+  .tile:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+}
+.tile:active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.tile[disabled] { opacity: .45; cursor: default; }
+.tile[disabled]:active { background: var(--surface); color: inherit; border-color: var(--line-strong); }
+
+/* Значок стоит в верхнем углу отдельной строкой, а не рядом с названием:
+   в половине сетки на 320 px «Бесконечный» и значок в одной строке
+   не помещаются, и название ломалось посреди слова. */
+.tile__icon { align-self: flex-end; opacity: .45; }
+.tile__icon svg { width: 18px; height: 18px; }
+.tile__body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.tile__title {
+  margin: 0;
+  font-size: clamp(17px, 5vw, 20px);
+  line-height: 1.15;
+  overflow-wrap: break-word;
+}
+.tile__state { font-size: 13px; line-height: 1.4; opacity: .7; }
+
+/* ── Спокойный список ───────────────────────────────────────────────── */
+
+.hub { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+
+.hub__item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 13px;
+  gap: 14px;
+  width: 100%;
+  min-height: 64px;
+  padding: 16px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: padding-left .35s ease, background-color .35s ease;
 }
-.overview__fire { font-size: 16px; }
+
+@media (hover: hover) {
+  .hub__item:hover { background: var(--surface-2); padding-left: 12px; }
+}
+.hub__item:active { background: var(--surface-2); }
+
+.hub__icon { flex: none; width: 22px; color: var(--faint); }
+.hub__icon svg { width: 20px; height: 20px; display: block; }
+.hub__body { flex: 1; min-width: 0; }
+.hub__name { display: block; font-size: 15px; font-weight: 500; letter-spacing: .01em; }
+.hub__state { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
+.hub__chev { color: var(--faint); font-size: 20px; flex: none; }
+.hub__item--done .hub__state { color: var(--good); }
+
+@media (min-width: 600px) {
+  .hero { min-height: 250px; padding: 32px; gap: 36px; }
+  .hero__title { font-size: 38px; }
+  .tiles { gap: 18px; }
+  .tile { padding: 24px; min-height: 160px; }
+}

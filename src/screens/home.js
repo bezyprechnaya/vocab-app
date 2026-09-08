@@ -1,15 +1,19 @@
 /* Хаб — стартовый экран. У каждого пункта видно состояние, чтобы попасть
    в нужное место одним нажатием (глава I, 3.1).
 
-   Чему учусь — флаг и уровень в углу панели: это подпись ко всему экрану,
-   а не пункт списка. Карточка под ней отвечает на два оставшихся вопроса:
-   насколько продвинулся (полоса) и не разорвана ли привычка (стрик).
+   Экран отвечает на три вопроса сразу и в том порядке, в каком они возникают.
+   Что я учу — заголовок с языком, уровнем и стриком. Куда идти сегодня —
+   крупная карточка «Слова дня» с полосой прогресса внутри: это то, зачем
+   приложение открывают, и вес на экране у неё соответствующий. Что ещё
+   бывает — два спутника рядом и спокойный список ниже: история, языки
+   и настройки заходят реже, им хватает строки.
+
    «Выучено» и «осталось» — две точки одной шкалы, поэтому они стоят не порознь,
    а по краям полосы: слева пройденное, справа остаток пути. Считаются только
    слова текущего уровня — соседние уровни и фразовые глаголы идут своим счётом
    и о том, сколько осталось пройти здесь, ничего не говорят. */
 
-import { el, plural, setTopbarMark } from "../ui.js";
+import { el, icon, plural } from "../ui.js";
 import * as session from "../session.js";
 import * as progress from "../progress.js";
 import * as packs from "../packs.js";
@@ -17,40 +21,64 @@ import * as settingsStore from "../settings.js";
 
 export const title = "VOCAB";
 
-function hubItem({ icon, name, state, hash, navigate, done, disabled }) {
+/** Строка списка: значок, название, состояние. */
+function hubItem({ mark, name, state, hash, navigate, done }) {
   return el("button.hub__item" + (done ? ".hub__item--done" : ""), {
+    type: "button",
+    onclick: () => navigate(hash),
+  },
+    el("span.hub__icon", {}, icon(mark)),
+    el("span.hub__body", {},
+      el("span.hub__name", {}, name),
+      el("span.hub__state", {}, state)),
+    el("span.hub__chev", {}, "→"));
+}
+
+/** Спутник главной карточки: тот же жест, вес поменьше. */
+function tile({ mark, name, state, hash, navigate, disabled }) {
+  return el("button.tile", {
     type: "button",
     disabled: !!disabled,
     onclick: () => !disabled && navigate(hash),
   },
-    el("span.hub__icon", {}, icon),
-    el("span.hub__body", {},
-      el("span.hub__name", {}, name),
-      el("span.hub__state", {}, state)),
-    el("span.hub__chev", {}, "›"));
+    el("span.tile__icon", {}, icon(mark)),
+    el("div.tile__body", {},
+      el("h3.tile__title", {}, name),
+      el("div.tile__state", {}, state)));
 }
 
-/** Карточка прогресса: полоса, шкала под ней и стрик. Над полосой пусто —
-    что именно учится, сказано флагом и уровнем в углу панели. */
-function header({ stats, level, streak, closedDays }) {
+/** Шапка: язык крупно, уровень и стрик под ним капителью. Это подпись ко
+    всему экрану — всё, что ниже, относится к этому языку и этому уровню. */
+function header({ study, level, streak, closedDays }) {
+  const streakText = streak
+    ? plural(streak, "день подряд", "дня подряд", "дней подряд")
+    : closedDays ? "Стрик прерван" : "Стрик ещё не начат";
+
+  return el("header.home__head", {},
+    el("h1.home__title", {}, packs.LANG_NAMES[study] || study.toUpperCase()),
+    el("div.home__meta", {},
+      el("span.home__meta-item", {}, `Уровень ${level.toUpperCase()}`),
+      el("span.home__dot"),
+      el("span.home__meta-item", {}, streak ? icon("flame") : null, streakText)));
+}
+
+/** Главная карточка: режим дня и полоса прогресса по уровню внутри неё. */
+function hero({ state, stats, level, navigate }) {
   const share = stats.total ? stats.learned / stats.total : 0;
 
-  return el("div.card.overview", {},
-    el("div.bar", {},
-      el("div.bar__fill", { style: `width:${Math.round(share * 100)}%` })),
-
-    el("div.overview__scale", {},
-      el("span", {}, `Выучено ${stats.learned}`),
-      el("span.muted", {}, `осталось ${stats.total - stats.learned}`
-        + ` на уровне ${level.toUpperCase()}`)),
-
-    el("div.overview__streak", {},
-      el("span.overview__fire", {}, streak ? "🔥" : "·"),
-      el("span", {}, streak
-        ? plural(streak, "день подряд", "дня подряд", "дней подряд")
-        : closedDays
-          ? "Стрик прервался — закройте день, чтобы начать заново"
-          : "Стрик начнётся с первого закрытого дня")));
+  return el("button.hero", { type: "button", onclick: () => navigate("#/day/words") },
+    el("div.hero__top", {},
+      el("div", {},
+        el("div.hero__label", {}, "Основной режим"),
+        el("h2.hero__title", {}, "Слова дня"),
+        el("div.hero__state", {}, state)),
+      el("span.hero__icon", {}, icon("book"))),
+    el("div.hero__foot", {},
+      el("div.hero__scale", {},
+        el("span", {}, `Прогресс ${level.toUpperCase()}`),
+        el("span", {}, `${stats.learned} / ${stats.total}`)),
+      el("div.bar", {},
+        el("div.bar__fill", { style: `width:${Math.round(share * 100)}%` }))));
 }
 
 export async function render({ navigate }) {
@@ -70,39 +98,39 @@ export async function render({ navigate }) {
 
   const closed = (await session.history()).filter(session.isDone);
 
-  const screen = el("div.hub");
+  const screen = el("div.home");
 
-  // Флаг и уровень — в левом углу панели: на хабе кнопки «назад» нет, угол свободен.
-  setTopbarMark([
-    el("span.topbar__flag", {}, packs.langFlag(settings.study)),
-    el("span.topbar__level", {}, settings.level.toUpperCase()),
-  ]);
+  screen.append(header({
+    study: settings.study, level: settings.level, streak, closedDays: closed.length,
+  }));
 
-  screen.append(header({ stats: levelTotals, level: settings.level, streak, closedDays: closed.length }));
+  screen.append(hero({
+    state: words.text, stats: levelTotals, level: settings.level, navigate,
+  }));
 
-  screen.append(
-    hubItem({ icon: "📘", name: "Слова дня", state: words.text, done: words.done,
-      hash: "#/day/words", navigate }),
-    hubItem({ icon: "🔗", name: "Фразовые глаголы", state: phrasal.text, done: phrasal.done,
+  screen.append(el("div.tiles", {},
+    tile({ mark: "link", name: "Фразовые глаголы", state: phrasal.text,
       hash: "#/day/phrasal", navigate }),
-    hubItem({ icon: "♾️", name: "Бесконечный режим",
+    tile({ mark: "infinity", name: "Бесконечный режим",
       state: endlessStats
         ? `Без дневного лимита · впереди ${endlessStats.total - endlessStats.learned}`
         : "Нет загруженных слов",
       disabled: !endlessStats,
-      hash: "#/endless/words", navigate }),
+      hash: "#/endless/words", navigate })));
+
+  screen.append(el("div.hub", {},
     // Повторение живёт внутри истории: день выбирается там же, где и виден.
-    hubItem({ icon: "🗓", name: "История и повторение",
+    hubItem({ mark: "calendar", name: "История и повторение",
       state: closed.length
         ? plural(closed.length, "закрытый день", "закрытых дня", "закрытых дней")
         : "Пока пусто",
       hash: "#/history", navigate }),
-    hubItem({ icon: "🌍", name: "Языки и уровни",
+    hubItem({ mark: "globe", name: "Языки и уровни",
       state: `${packs.langFlag(settings.study)} → ${packs.langFlag(settings.lang)}`
         + ` · уровень ${settings.level.toUpperCase()}`,
       hash: "#/packs", navigate }),
-    hubItem({ icon: "⚙️", name: "Настройки", state: "Размер дня, тема, копия данных",
-      hash: "#/settings", navigate }));
+    hubItem({ mark: "settings", name: "Настройки", state: "Размер дня, тема, копия данных",
+      hash: "#/settings", navigate })));
 
   return screen;
 }

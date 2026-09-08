@@ -4,7 +4,7 @@
    жест «назад» на телефоне и прямые ссылки. Своего роутера не нужно —
    достаточно таблицы шаблонов и стека возврата. */
 
-import { clear, el, toast, setTopbarMark } from "./ui.js";
+import { clear, el, toast } from "./ui.js";
 
 import * as home from "./screens/home.js";
 import * as day from "./screens/day.js";
@@ -90,7 +90,6 @@ export async function render() {
   try {
     if (!match) { navigate(HOME, { replace: true }); return; }
     const { route, params } = match;
-    setTopbarMark(null);                     // метка своя у каждого экрана — по умолчанию её нет
     const ctx = { params, navigate, back, refresh, setTitle };
     const node = await route.screen.render(ctx);
     clear(container).append(node);

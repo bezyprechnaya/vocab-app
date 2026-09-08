@@ -1,24 +1,52 @@
 /* Базовые токены, каркас экрана и общие элементы.
-   Вёрстка mobile-first: сначала 320 px, потом расширения для больших экранов. */
+   Вёрстка mobile-first: сначала 320 px, потом расширения для больших экранов.
+
+   Оформление — «тихая роскошь»: тёплая бумага вместо белизны, тонкая линия
+   вместо тени, прямой угол вместо скругления. Заголовки и слова набраны
+   антиквой, служебные подписи — капителью с широким трекингом. Цветом
+   выделено ровно одно: текущее действие. */
 
 @import url("./home.css");
 @import url("./day.css");
 @import url("./lists.css");
 
 :root {
-  --bg: #f6f7f9;
+  /* Шкала бумаги: от почти белого 50 до чернильного 950. */
+  --lux-50: #f9f8f6;
+  --lux-100: #f2efe9;
+  --lux-200: #e6dfd3;
+  --lux-300: #d5cab8;
+  --lux-400: #bcae95;
+  --lux-500: #a39171;
+  --lux-600: #887658;
+  --lux-700: #716047;
+  --lux-800: #594b37;
+  --lux-900: #423627;
+  --lux-950: #261f15;
+
+  --bg: var(--lux-50);
   --surface: #ffffff;
-  --surface-2: #eef1f5;
-  --text: #16191d;
-  --muted: #626b78;
-  --line: #d9dee6;
-  --accent: #1f6feb;
-  --accent-text: #ffffff;
-  --good: #1a7f4b;
-  --warn: #a8620a;
-  --bad: #c0392b;
-  --radius: 14px;
-  --gap: 12px;
+  --surface-2: var(--lux-100);
+  --text: var(--lux-950);
+  --muted: var(--lux-600);
+  --faint: var(--lux-400);
+  --line: var(--lux-200);
+  --line-strong: var(--lux-300);
+  --accent: var(--lux-950);
+  --accent-text: var(--lux-50);
+  --good: #2a4b33;
+  --good-line: #a8c7b0;
+  --good-bg: #eef4ef;
+  --warn: #7a5a1f;
+  --bad: #7a3631;
+  --bad-line: #e2b6b3;
+  --bad-bg: #fdf0ef;
+
+  --font-sans: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Playfair Display", "Iowan Old Style", Georgia, "Times New Roman", serif;
+
+  --radius: 0px;
+  --gap: 14px;
   --tap: 48px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -29,20 +57,27 @@
 
 /* Тёмные токены живут в одном месте, а применяются двумя путями: по системе —
    пока человек не выбрал тему сам, и по атрибуту `data-theme` — когда выбрал.
-   Светлый выбор глушит медиазапрос, поэтому :not([data-theme="light"]). */
+   Светлый выбор глушит медиазапрос, поэтому :not([data-theme="light"]).
+   Тёмная тема — та же палитра, перевёрнутая: не серый экран, а тёмное дерево. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #14171b;
-    --surface: #1c2128;
-    --surface-2: #262c34;
-    --text: #e8ecf1;
-    --muted: #9aa5b1;
-    --line: #333b45;
-    --accent: #4c8dff;
-    --accent-text: #0b0f14;
-    --good: #4ac585;
-    --warn: #e0a458;
-    --bad: #ef6b5b;
+    --bg: #16120c;
+    --surface: #1e1a13;
+    --surface-2: #262117;
+    --text: var(--lux-100);
+    --muted: var(--lux-400);
+    --faint: var(--lux-600);
+    --line: #332c21;
+    --line-strong: #473d2e;
+    --accent: var(--lux-100);
+    --accent-text: #16120c;
+    --good: #a8c7b0;
+    --good-line: #3d5645;
+    --good-bg: #1c2620;
+    --warn: #d5b177;
+    --bad: #e2b6b3;
+    --bad-line: #5c3a37;
+    --bad-bg: #2a1c1a;
   }
 }
 
@@ -50,17 +85,23 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #14171b;
-  --surface: #1c2128;
-  --surface-2: #262c34;
-  --text: #e8ecf1;
-  --muted: #9aa5b1;
-  --line: #333b45;
-  --accent: #4c8dff;
-  --accent-text: #0b0f14;
-  --good: #4ac585;
-  --warn: #e0a458;
-  --bad: #ef6b5b;
+  --bg: #16120c;
+  --surface: #1e1a13;
+  --surface-2: #262117;
+  --text: var(--lux-100);
+  --muted: var(--lux-400);
+  --faint: var(--lux-600);
+  --line: #332c21;
+  --line-strong: #473d2e;
+  --accent: var(--lux-100);
+  --accent-text: #16120c;
+  --good: #a8c7b0;
+  --good-line: #3d5645;
+  --good-bg: #1c2620;
+  --warn: #d5b177;
+  --bad: #e2b6b3;
+  --bad-line: #5c3a37;
+  --bad-bg: #2a1c1a;
 }
 
 * { box-sizing: border-box; }
@@ -75,20 +116,46 @@ html, body {
   min-height: 100%;
   background: var(--bg);
   color: var(--text);
-  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font: 400 16px/1.5 var(--font-sans);
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   overscroll-behavior-y: contain;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Полосу прокрутки убираем: на телефоне её нет, а на большом экране она
+   разрезает бумажное поле пополам. */
+::-webkit-scrollbar { width: 0; height: 0; }
 
 .app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   min-height: 100dvh;
-  max-width: 720px;
+  max-width: 760px;
   margin: 0 auto;
+  background: var(--bg);
+}
+
+/* ── Типографика ────────────────────────────────────────────────────── */
+
+h1, h2, h3 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/* Капитель с широким трекингом — подпись, а не заголовок: ею набраны
+   разделители списков, метки и все кнопки. */
+.section-title {
+  margin: 12px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--faint);
 }
 
 /* ── Верхняя панель ─────────────────────────────────────────────────── */
@@ -109,8 +176,10 @@ html, body {
 
 .topbar__title {
   margin: 0;
-  font-size: 17px;
+  font-family: var(--font-serif);
+  font-size: 19px;
   font-weight: 600;
+  letter-spacing: .02em;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -123,40 +192,27 @@ html, body {
   min-width: var(--tap);
   border: 0;
   background: none;
-  color: var(--accent);
+  color: var(--muted);
+  font: inherit;
   font-size: 26px;
   line-height: 1;
   cursor: pointer;
+  transition: color .3s ease;
 }
 
-.topbar__help { font-size: 19px; }
+.topbar__back:hover,
+.topbar__help:hover { color: var(--text); }
 
-/* Метка и «назад» делят левую ячейку: вместе они не появляются, а колонки
-   остаются симметричными — иначе заголовок съезжает из центра. Метка шире
-   ячейки и спокойно выходит за неё: заголовок короткий, места хватает. */
-.topbar__back, .topbar__mark { grid-column: 1; }
+.topbar__help {
+  font-family: var(--font-serif);
+  font-size: 18px;
+}
+
+/* Кнопки держат крайние ячейки, заголовок — среднюю: так он стоит по центру
+   панели независимо от того, что написано вокруг. */
+.topbar__back { grid-column: 1; }
 .topbar__title { grid-column: 2; }
 .topbar__help { grid-column: 3; }
-
-.topbar__mark {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-self: start;
-  height: var(--tap);
-  padding-left: 12px;
-  white-space: nowrap;
-}
-.topbar__flag { font-size: 20px; line-height: 1; }
-.topbar__level {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: .04em;
-}
 
 /* Скрытые кнопки панели остаются в сетке: иначе заголовок съезжает из центра. */
 .topbar__back[hidden], .topbar__help[hidden] { display: block !important; visibility: hidden; }
@@ -168,34 +224,50 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
-  padding: var(--gap);
+  padding: 20px var(--gap) var(--gap);
   padding-left: max(var(--gap), var(--safe-left));
   padding-right: max(var(--gap), var(--safe-right));
   padding-bottom: calc(var(--gap) + var(--safe-bottom));
   outline: none;
+  animation: fade-in .5s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
 
 .screen__lead {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
-}
-
-.section-title {
-  margin: 8px 0 0;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--muted);
+  line-height: 1.6;
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: var(--gap);
+  padding: 18px;
 }
+
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 24px;
+}
+
+/* Значок наследует цвет и размер от места, куда его поставили. */
+.icon { display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.icon svg { width: 20px; height: 20px; display: block; }
 
 .muted { color: var(--muted); }
 .warn-note { color: var(--warn); }
@@ -205,38 +277,73 @@ html, body {
 
 /* ── Кнопки ─────────────────────────────────────────────────────────── */
 
+/* Одна форма на все действия: прямоугольник в тонкой рамке, капитель внутри.
+   Разница между «главным» и «обычным» — заливка, а не цвет и не размер. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   min-height: var(--tap);
-  padding: 10px 16px;
-  border: 1px solid var(--line);
+  padding: 12px 20px;
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: transparent;
   color: var(--text);
-  font: inherit;
+  font-family: var(--font-sans);
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
   cursor: pointer;
+  transition: background-color .35s ease, color .35s ease, border-color .35s ease;
 }
 
-.btn:active { transform: translateY(1px); }
-.btn[disabled] { opacity: .5; cursor: default; }
+@media (hover: hover) {
+  .btn:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+}
+.btn:active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.btn[disabled] { opacity: .4; cursor: default; }
+.btn[disabled]:active { background: transparent; color: var(--text); border-color: var(--line-strong); }
+
 .btn--primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-.btn--good { background: var(--good); border-color: var(--good); color: #fff; }
-.btn--bad { background: var(--bad); border-color: var(--bad); color: #fff; }
-.btn--ghost { background: transparent; }
-.btn--danger { color: var(--bad); border-color: var(--bad); background: transparent; }
+@media (hover: hover) {
+  .btn--primary:hover { background: transparent; color: var(--text); border-color: var(--accent); }
+}
+
+/* «Да» и «Нет» держат общую форму: разводит их не заливка, а волосяная
+   подсветка рамки — на глаз пара читается, а строй кнопок не рассыпается. */
+.btn--good { border-color: var(--good-line); }
+.btn--bad { border-color: var(--bad-line); }
+@media (hover: hover) {
+  .btn--good:hover { background: var(--good-bg); border-color: var(--good-line); color: var(--good); }
+  .btn--bad:hover { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad); }
+}
+.btn--good:active { background: var(--good-bg); border-color: var(--good-line); color: var(--good); }
+.btn--bad:active { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad); }
+
+.btn--ghost { border-color: transparent; color: var(--muted); }
+@media (hover: hover) {
+  .btn--ghost:hover { background: transparent; color: var(--text); border-color: var(--line-strong); }
+}
+.btn--ghost:active { background: transparent; color: var(--text); border-color: var(--line-strong); }
+
+.btn--danger { color: var(--bad); border-color: var(--bad-line); background: transparent; }
+@media (hover: hover) {
+  .btn--danger:hover { background: var(--bad-bg); color: var(--bad); border-color: var(--bad-line); }
+}
+.btn--danger:active { background: var(--bad-bg); color: var(--bad); border-color: var(--bad-line); }
+
 .btn--wide { width: 100%; }
-.btn--small { min-height: 36px; padding: 6px 12px; font-size: 14px; font-weight: 500; }
+.btn--small { min-height: 38px; padding: 8px 14px; font-size: 11px; letter-spacing: .14em; }
 
 /* Основные действия — в нижней трети экрана, под большой палец. */
 .actions {
   display: flex;
-  gap: var(--gap);
+  gap: 12px;
   margin-top: auto;
   padding-top: var(--gap);
+  animation: slide-up .45s cubic-bezier(.2, .8, .2, 1) both;
 }
 .actions .btn { flex: 1; }
 
@@ -245,18 +352,21 @@ html, body {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(16px + var(--safe-bottom));
+  bottom: calc(20px + var(--safe-bottom));
   z-index: 30;
   transform: translate(-50%, 20px);
   max-width: calc(100vw - 32px);
-  padding: 10px 16px;
-  border-radius: 999px;
+  padding: 12px 20px;
+  border: 1px solid var(--text);
   background: var(--text);
   color: var(--bg);
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
   opacity: 0;
   pointer-events: none;
-  transition: opacity .2s, transform .2s;
+  transition: opacity .25s, transform .25s;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
@@ -269,32 +379,40 @@ html, body {
   justify-content: center;
   padding: var(--gap);
   padding-bottom: calc(var(--gap) + var(--safe-bottom));
-  background: rgba(0, 0, 0, .45);
+  background: rgba(38, 31, 21, .5);
+  backdrop-filter: blur(2px);
 }
 .modal[hidden] { display: none; }
 
 .modal__box {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   background: var(--surface);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 24px;
+  animation: slide-up .35s cubic-bezier(.2, .8, .2, 1) both;
 }
-.modal__title { margin: 0 0 8px; font-size: 17px; }
-.modal__text { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
-.modal__actions { display: flex; gap: var(--gap); }
+.modal__title { margin: 0 0 10px; font-size: 24px; }
+.modal__text { margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.modal__actions { display: flex; gap: 12px; }
 .modal__actions .btn { flex: 1; }
 
 /* ── Прогресс ───────────────────────────────────────────────────────── */
 
 .bar {
-  height: 8px;
-  border-radius: 999px;
-  background: var(--surface-2);
+  height: 3px;
+  background: var(--line);
   overflow: hidden;
 }
-.bar__fill { height: 100%; background: var(--accent); border-radius: 999px; }
+.bar__fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width .7s cubic-bezier(.2, .8, .2, 1);
+}
 
 @media (min-width: 600px) {
+  :root { --gap: 18px; }
   .modal { align-items: center; }
+  .screen { padding-top: 28px; }
 }
