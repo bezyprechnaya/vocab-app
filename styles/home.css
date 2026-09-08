@@ -1,0 +1,51 @@
+/* Экран-хаб: список действий с состоянием у каждого. */
+
+.hub { display: flex; flex-direction: column; gap: 10px; }
+
+.hub__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hub__icon { font-size: 22px; width: 28px; text-align: center; flex: none; }
+.hub__body { flex: 1; min-width: 0; }
+.hub__name { display: block; font-weight: 600; }
+.hub__state { display: block; color: var(--muted); font-size: 13px; }
+.hub__chev { color: var(--muted); font-size: 22px; flex: none; }
+.hub__item--done .hub__state { color: var(--good); }
+
+/* Шапка хаба: полоса прогресса со шкалой и стрик. Что именно учится, написано
+   флагом и уровнем в углу верхней панели — здесь над полосой пусто. */
+
+.overview { display: flex; flex-direction: column; gap: 10px; }
+
+.overview__scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.overview__scale .muted { font-weight: 400; }
+
+.overview__streak {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+}
+.overview__fire { font-size: 16px; }

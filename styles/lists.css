@@ -1,0 +1,104 @@
+/* Списки: история, пакеты, настройки, справка. */
+
+.list { display: flex; flex-direction: column; gap: 10px; }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  width: 100%;
+  min-height: var(--tap);
+  cursor: pointer;
+}
+.row--static { cursor: default; }
+.row__body { flex: 1; min-width: 0; }
+.row__title { display: block; font-weight: 600; }
+.row__sub { display: block; color: var(--muted); font-size: 13px; }
+.row__side { flex: none; display: flex; align-items: center; gap: 8px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.chip--on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.chip[disabled] { opacity: .5; cursor: default; }
+.chips--center { justify-content: center; }
+
+/* Итог дня: двойной счёт и список двумя группами. Новое — цветом и первым,
+   знакомое — приглушённым и вторым: закрыто и то и другое, но труд разный. */
+
+.tally {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.tally__cell { min-width: 76px; text-align: center; }
+.tally__num { font-size: 28px; font-weight: 700; line-height: 1.1; }
+.tally__label { font-size: 12px; color: var(--muted); }
+.tally__plus { color: var(--muted); font-size: 20px; font-weight: 600; }
+.tally__cell--fresh .tally__num { color: var(--accent); }
+.tally__cell--known .tally__num { color: var(--muted); }
+
+.words-groups { display: flex; flex-direction: column; gap: 16px; padding-top: 4px; }
+.words-group { display: flex; flex-direction: column; gap: 8px; }
+.words-group__title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.words-group__count { letter-spacing: 0; font-weight: 700; }
+
+.words-list { display: flex; flex-direction: column; gap: 8px; }
+.word-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.word-row__en { font-weight: 600; }
+.word-row__tr { color: var(--muted); text-align: right; }
+/* Знакомое с сортировки: в списке дня оно есть, но взгляд на нём не задерживается. */
+.word-row--known { border-style: dashed; opacity: .75; }
+
+.help h3 { margin: 16px 0 4px; font-size: 16px; }
+.help p { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
+.help ol, .help ul { margin: 0 0 8px; padding-left: 20px; color: var(--muted); font-size: 14px; }
+
+.onboarding { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; gap: 12px; }
+.onboarding__mark { font-size: 44px; }
+.onboarding__title { margin: 0; font-size: 24px; }
+.onboarding__text { margin: 0; color: var(--muted); }
+.onboarding__dots { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+
+/* Выбор языка и уровня на знакомстве: ряды кнопок и строка состояния под ними. */
+.choice { display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center; }
+.choice .chips { justify-content: center; }
+.choice__label { font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 4px; }
+.choice__hint { margin: 4px 0 0; font-size: 14px; color: var(--muted); min-height: 40px; }
+.choice__status { margin: 0; font-size: 13px; color: var(--muted); min-height: 18px; }
+.choice .bar { width: 100%; }

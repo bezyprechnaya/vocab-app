@@ -1,0 +1,9 @@
+# Зависимости сборщика пакетов (tools/build-packs.py).
+# Во фронтенде зависимостей нет и не будет — эти живут только здесь.
+#
+#   python3 -m venv tools/.venv
+#   tools/.venv/bin/pip install -r tools/requirements.txt
+#   tools/.venv/bin/python tools/build-packs.py --lang ru --level b1
+
+cefrpy==1.0.3           # уровни CEFR офлайн, с учётом части речи
+deep-translator==1.11.4 # перевод без ключа (Google по умолчанию)
