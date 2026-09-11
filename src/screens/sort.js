@@ -22,7 +22,7 @@ export async function render(ctx, current) {
   const card = el("div.word-card", {},
     el("div.word-card__en", {}, lang.word(item, settings.study)),
     el("div.word-card__pos", {}, posLabel(item.pos)),
-    el("div.word-card__hint", {}, `В наборе дня: ${current.daySet.length} из ${current.size}`));
+    el("div.word-card__hint.word-card__hint--always", {}, `В наборе дня: ${current.daySet.length} из ${current.size}`));
   attachSwipe(card, { onLeft: () => answer(false), onRight: () => answer(true) });
 
   return el("div.day", {},

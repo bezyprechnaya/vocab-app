@@ -4,7 +4,7 @@
    жест «назад» на телефоне и прямые ссылки. Своего роутера не нужно —
    достаточно таблицы шаблонов и стека возврата. */
 
-import { clear, el, toast, setTopbarMark } from "./ui.js";
+import { clear, el, icon, toast } from "./ui.js";
 
 import * as home from "./screens/home.js";
 import * as day from "./screens/day.js";
@@ -16,17 +16,21 @@ import * as settings from "./screens/settings.js";
 import * as help from "./screens/help.js";
 import * as onboarding from "./screens/onboarding.js";
 
+/* Оболочка экрана («chrome») — три вида:
+     panel — левая боковая панель вместо верхней (хаб, история, языки, настройки);
+     top   — полная экранная сессия с полосой «Назад / заголовок» (день, повторение);
+     none  — ни того, ни другого (знакомство, у него свой выход). */
 const ROUTES = [
-  { pattern: "/home", screen: home },
-  { pattern: "/day/:kind", screen: day },
-  { pattern: "/endless/:kind", screen: endless },
-  { pattern: "/history", screen: history },
-  { pattern: "/history/:date", screen: history },
-  { pattern: "/review/:date/:kind", screen: review },
-  { pattern: "/packs", screen: packs },
-  { pattern: "/settings", screen: settings },
-  { pattern: "/help", screen: help },
-  { pattern: "/onboarding", screen: onboarding },
+  { pattern: "/home", screen: home, chrome: "panel" },
+  { pattern: "/day/:kind", screen: day, chrome: "top" },
+  { pattern: "/endless/:kind", screen: endless, chrome: "top" },
+  { pattern: "/history", screen: history, chrome: "panel" },
+  { pattern: "/history/:date", screen: history, chrome: "panel" },
+  { pattern: "/review/:date/:kind", screen: review, chrome: "top" },
+  { pattern: "/packs", screen: packs, chrome: "panel" },
+  { pattern: "/settings", screen: settings, chrome: "panel" },
+  { pattern: "/help", screen: help, chrome: "top" },
+  { pattern: "/onboarding", screen: onboarding, chrome: "none" },
 ];
 
 export const HOME = "#/home";
@@ -64,8 +68,9 @@ export function navigate(hash, { replace = false } = {}) {
 }
 
 /** Назад — шагом браузера, если шаг наш; иначе на хаб. Кнопка «назад» телефона
-    и жест работают тем же путём: стек ведём по hashchange. */
-export function back() {
+    и жест работают тем же путём: стек ведём по hashchange. Вызывается панелью
+    (`start`), экранам он не нужен — у них есть `navigate`. */
+function back() {
   if (stack.length > 1) window.history.back();
   else navigate(HOME, { replace: true });
 }
@@ -89,16 +94,18 @@ export async function render() {
   const match = parse(location.hash);
   try {
     if (!match) { navigate(HOME, { replace: true }); return; }
-    const { route, params } = match;
-    setTopbarMark(null);                     // метка своя у каждого экрана — по умолчанию её нет
-    const ctx = { params, navigate, back, refresh, setTitle };
+    const { route, params, path } = match;
+    const ctx = { params, navigate, refresh, setTitle };
     const node = await route.screen.render(ctx);
     clear(container).append(node);
     setTitle(typeof route.screen.title === "function"
       ? route.screen.title(params) : route.screen.title || "VOCAB");
+    // Вид оболочки задаёт маршрут: у дня и повторения — своя полоса сверху,
+    // у разделов — навигация в боковой панели.
+    document.querySelector(".app").dataset.chrome = route.chrome;
+    setActiveItem(path);
     // Экран может отказаться от «назад»: у знакомства свой выход — «Пропустить».
     document.getElementById("back").hidden = !canGoBack() || !!route.screen.noBack;
-    document.getElementById("help-link").hidden = location.hash === "#/help";
     container.scrollTop = 0;
     window.scrollTo(0, 0);
   } catch (error) {
@@ -113,15 +120,34 @@ export async function render() {
   }
 }
 
+/** Подсветка текущего раздела в боковой панели: активен пункт, чей маршрут
+    является префиксом текущего пути («/history/2026-09-01» → «История»). */
+function setActiveItem(path) {
+  for (const item of document.querySelectorAll(".side__item[data-route]")) {
+    const target = item.dataset.route.slice(1);          // "#/history" -> "/history"
+    const on = path === target || path.startsWith(target + "/");
+    item.classList.toggle("side__item--on", on);
+  }
+}
+
 function setTitle(text) {
   document.getElementById("title").textContent = text;
 }
 
+/** Боковая панель: значки в ITEMS вставляет здесь, клики ведут тем же
+    `navigate`, что и ссылки на экранах. */
+function wireSidebar() {
+  for (const item of document.querySelectorAll(".side__item[data-route]")) {
+    if (item.dataset.icon) item.prepend(icon(item.dataset.icon));
+    item.addEventListener("click", () => navigate(item.dataset.route));
+  }
+}
+
 export function start(node) {
   container = node;
+  wireSidebar();
   window.addEventListener("hashchange", trackHash);
   document.getElementById("back").addEventListener("click", back);
-  document.getElementById("help-link").addEventListener("click", () => navigate("#/help"));
   if (!location.hash) location.replace(HOME);
   stack = [location.hash || HOME];
   return render();

@@ -2,12 +2,40 @@
 
 .list { display: flex; flex-direction: column; gap: 10px; }
 
+/* Заголовок раздела: на ПК верхняя полоса скрыта, и имя раздела пишется
+   в самой странице; справа — ссылка «назад», когда есть откуда возвращаться.
+   На телефоне название держит верхняя полоса, и заголовок в теле прячется. */
+.page-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.page-head h1 { margin: 0; font-size: clamp(28px, 5vw, 36px); }
+.page-head__back {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color .3s ease;
+}
+.page-head__back:hover { color: var(--text); }
+@media (max-width: 899px) { .page-head { display: none; } }
+
 .row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--surface);
   text-align: left;
@@ -16,89 +44,156 @@
   width: 100%;
   min-height: var(--tap);
   cursor: pointer;
+  transition: background-color .35s ease, color .35s ease, border-color .35s ease;
+}
+@media (hover: hover) {
+  .row:hover { border-color: var(--accent); }
+  .row--static:hover { border-color: var(--line-strong); }
 }
 .row--static { cursor: default; }
 .row__body { flex: 1; min-width: 0; }
-.row__title { display: block; font-weight: 600; }
-.row__sub { display: block; color: var(--muted); font-size: 13px; }
-.row__side { flex: none; display: flex; align-items: center; gap: 8px; }
+.row__title {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 500;
+}
+.row__sub { display: block; margin-top: 3px; color: var(--muted); font-size: 13px; }
+.row__side { flex: none; display: flex; align-items: center; gap: 10px; }
+.row__chev { color: var(--faint); font-size: 20px; }
+.row .icon svg { width: 18px; height: 18px; display: block; }
+
+/* ── Ряды выбора ────────────────────────────────────────────────────── */
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
-  min-height: 36px;
-  padding: 6px 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: transparent;
   color: inherit;
-  font: inherit;
-  font-size: 14px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
   cursor: pointer;
+  transition: background-color .3s ease, color .3s ease, border-color .3s ease;
 }
+@media (hover: hover) { .chip:hover { border-color: var(--accent); } }
 .chip--on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-.chip[disabled] { opacity: .5; cursor: default; }
+.chip[disabled] { opacity: .4; cursor: default; }
 .chips--center { justify-content: center; }
 
-/* Итог дня: двойной счёт и список двумя группами. Новое — цветом и первым,
-   знакомое — приглушённым и вторым: закрыто и то и другое, но труд разный. */
+/* ── Итог дня ───────────────────────────────────────────────────────── */
+
+/* Двойной счёт и список двумя группами. Новое — первым и в полную силу,
+   знакомое — вторым и тише: закрыто и то и другое, но труд разный. */
 
 .tally {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 16px;
+  gap: 28px;
+  padding: 20px 0;
 }
-.tally__cell { min-width: 76px; text-align: center; }
-.tally__num { font-size: 28px; font-weight: 700; line-height: 1.1; }
-.tally__label { font-size: 12px; color: var(--muted); }
-.tally__plus { color: var(--muted); font-size: 20px; font-weight: 600; }
-.tally__cell--fresh .tally__num { color: var(--accent); }
+.tally__cell { min-width: 84px; text-align: center; }
+.tally__num {
+  font-family: var(--font-serif);
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1;
+}
+.tally__label {
+  margin-top: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.tally__plus {
+  font-family: var(--font-serif);
+  color: var(--line-strong);
+  font-size: 26px;
+  line-height: 1.4;
+}
 .tally__cell--known .tally__num { color: var(--muted); }
 
-.words-groups { display: flex; flex-direction: column; gap: 16px; padding-top: 4px; }
-.words-group { display: flex; flex-direction: column; gap: 8px; }
+.words-groups { display: flex; flex-direction: column; gap: 26px; padding-top: 4px; }
+.words-group { display: flex; flex-direction: column; gap: 4px; }
 .words-group__title {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
-  font-size: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-strong);
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: .04em;
+  letter-spacing: .18em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--faint);
 }
-.words-group__count { letter-spacing: 0; font-weight: 700; }
+.words-group__count { letter-spacing: .06em; color: var(--muted); }
 
-.words-list { display: flex; flex-direction: column; gap: 8px; }
+.words-list { display: flex; flex-direction: column; }
 .word-row {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  align-items: baseline;
+  gap: 16px;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--line);
 }
-.word-row__en { font-weight: 600; }
-.word-row__tr { color: var(--muted); text-align: right; }
+.word-row__en { font-weight: 500; }
+.word-row__tr { color: var(--muted); text-align: right; font-size: 14px; }
 /* Знакомое с сортировки: в списке дня оно есть, но взгляд на нём не задерживается. */
-.word-row--known { border-style: dashed; opacity: .75; }
+.word-row--known { opacity: .55; }
 
-.help h3 { margin: 16px 0 4px; font-size: 16px; }
-.help p { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
-.help ol, .help ul { margin: 0 0 8px; padding-left: 20px; color: var(--muted); font-size: 14px; }
+/* ── Справка ────────────────────────────────────────────────────────── */
 
-.onboarding { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; gap: 12px; }
-.onboarding__mark { font-size: 44px; }
-.onboarding__title { margin: 0; font-size: 24px; }
-.onboarding__text { margin: 0; color: var(--muted); }
-.onboarding__dots { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+.help h3 { margin: 26px 0 8px; font-size: 20px; }
+.help p { margin: 0 0 10px; color: var(--muted); font-size: 15px; line-height: 1.65; }
+.help ol, .help ul { margin: 0 0 10px; padding-left: 20px; color: var(--muted); font-size: 15px; line-height: 1.65; }
 
-/* Выбор языка и уровня на знакомстве: ряды кнопок и строка состояния под ними. */
-.choice { display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center; }
+/* ── Знакомство ─────────────────────────────────────────────────────── */
+
+.onboarding {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  animation: fade-in .5s cubic-bezier(.2, .8, .2, 1) both;
+}
+.onboarding__mark {
+  font-family: var(--font-serif);
+  font-size: 34px;
+  letter-spacing: .14em;
+  color: var(--lux-400);
+}
+.onboarding__title { margin: 0; font-size: clamp(28px, 8vw, 38px); }
+.onboarding__text { margin: 0 auto; max-width: 460px; color: var(--muted); line-height: 1.7; }
+.onboarding__dots { display: flex; gap: 6px; justify-content: center; margin-top: 12px; }
+.onboarding__dots .dot { width: 24px; }
+
+/* Выбор языков и уровня на знакомстве: ряды кнопок и строка состояния под ними. */
+.choice { display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; }
 .choice .chips { justify-content: center; }
-.choice__label { font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 4px; }
-.choice__hint { margin: 4px 0 0; font-size: 14px; color: var(--muted); min-height: 40px; }
-.choice__status { margin: 0; font-size: 13px; color: var(--muted); min-height: 18px; }
+.choice__label {
+  margin-top: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.choice__hint { margin: 6px 0 0; font-size: 14px; color: var(--muted); min-height: 40px; line-height: 1.55; }
+.choice__status { margin: 0; font-size: 12px; color: var(--faint); min-height: 18px; }
 .choice .bar { width: 100%; }

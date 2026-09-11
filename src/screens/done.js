@@ -3,7 +3,7 @@
    Счёт двойной — новое и уже знакомое считаются порознь (`screens/summary.js`),
    поэтому «10 новых + 6 знакомых» видно и в цифрах, и в самом списке. */
 
-import { el, formatDate } from "../ui.js";
+import { el, icon, formatDate } from "../ui.js";
 import * as settingsStore from "../settings.js";
 import * as summary from "./summary.js";
 
@@ -13,7 +13,7 @@ export async function render(ctx, current) {
 
   return el("div.day", {},
     el("div.done-hero", {},
-      el("div.done-hero__mark", {}, "✓"),
+      el("div.done-hero__mark", {}, icon("check")),
       el("h2.done-hero__title", {}, "Готово на сегодня"),
       el("p.muted.done-hero__date", {}, formatDate(current.date))),
 

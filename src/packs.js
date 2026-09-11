@@ -11,7 +11,7 @@ import * as db from "./db.js";
 import * as settingsStore from "./settings.js";
 import * as translate from "./translate.js";
 
-export const SCHEMA = 1;
+const SCHEMA = 1;
 export const LEVELS = ["a1", "a2", "b1", "b2", "c1", "c2"];
 
 export const LANG_NAMES = {
@@ -22,7 +22,7 @@ export const LANG_NAMES = {
 /** Флаг языка. Пара языков читается взглядом быстрее, чем парой кодов,
     поэтому на главной стоит флаг, а код остаётся подписью. Языку без флага
     достаётся белый: лучше пустое место, чем чужой флаг. */
-export const LANG_FLAGS = {
+const LANG_FLAGS = {
   en: "🇬🇧", ru: "🇷🇺", es: "🇪🇸",
   de: "🇩🇪", fr: "🇫🇷",
 };
@@ -35,7 +35,7 @@ export function langFlag(code) {
     для всех тут нет и не нужно: недостающий язык собирается на месте. */
 export const LANGS = ["en", "ru", "es", "de", "fr"];
 
-export const LEVEL_NAMES = {
+const LEVEL_NAMES = {
   a1: "A1 · начальный", a2: "A2 · базовый", b1: "B1 · средний",
   b2: "B2 · выше среднего", c1: "C1 · продвинутый", c2: "C2 · владение",
   phrasal: "Фразовые глаголы",
@@ -172,7 +172,7 @@ export async function uninstall(lang, level) {
 }
 
 /** Есть ли такой пакет в каталоге. */
-export async function entryFor(lang, level) {
+async function entryFor(lang, level) {
   const list = await catalog();
   return list.find((p) => p.lang === lang && p.level === level) || null;
 }
@@ -180,13 +180,13 @@ export async function entryFor(lang, level) {
 /** Пакет под язык и уровень должен лежать в базе. Нет — ставим прямо сейчас.
     `ready` — уже стоял, `installed` — только что поставили, `missing` — такого
     пакета в каталоге нет. */
-export async function ensureFor(lang, level, onProgress) {
+async function ensureFor(lang, level, onProgress) {
   const have = await db.get("packs", db.packKey(lang, level));
-  if (have) return { status: "ready", level };
+  if (have) return { status: "ready" };
   const entry = await entryFor(lang, level);
-  if (!entry) return { status: "missing", level };
+  if (!entry) return { status: "missing" };
   await install(entry, onProgress);
-  return { status: "installed", level, entry };
+  return { status: "installed" };
 }
 
 /** Слова уровня должны лежать в базе хоть на каком-то языке: из них берутся

@@ -11,10 +11,10 @@ import * as db from "./db.js";
 import * as packs from "./packs.js";
 import * as settingsStore from "./settings.js";
 
-export const SCHEMA = 1;
+const SCHEMA = 1;
 const STATUS_RANK = { new: 0, learning: 1, learned: 2 };
 
-export async function collect() {
+async function collect() {
   const [items, progress, sessions, packRows, settings] = await Promise.all([
     db.getAll("items"), db.getAll("progress"), db.getAll("sessions"),
     db.getAll("packs"), db.getAll("settings"),
@@ -27,7 +27,7 @@ export async function collect() {
   };
 }
 
-export function fileName() {
+function fileName() {
   return `vocab-backup-${new Date().toISOString().slice(0, 10)}.json`;
 }
 

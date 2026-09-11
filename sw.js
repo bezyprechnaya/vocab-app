@@ -8,11 +8,12 @@
    Пакеты (`packs/`) в кэш не кладём: после установки они лежат в IndexedDB,
    дублировать нечего. */
 
-const VERSION = "2026-09-06.2";
+const VERSION = "2026-09-08.9";
 const CACHE = `vocab-${VERSION}`;
 
-// На локальном сервере разработки кэш только мешает: правка файла должна быть видна
-// с первой перезагрузки. Поэтому там работаем «сначала сеть», а кэш держим запасным.
+// На локальном сервере разработки не перехватываем ничего: правка файла должна быть
+// видна с первой перезагрузки, а выключенный сервер должен оставаться честной ошибкой
+// браузера, а не страницей-ловушкой «нет копии в кэше» (кэш в разработке пуст).
 const DEV = ["localhost", "127.0.0.1"].includes(self.location.hostname);
 
 const SHELL = [
@@ -36,6 +37,7 @@ const SHELL = [
   "./src/translate.js",
   "./src/lang.js",
   "./src/choose.js",
+  "./src/flip.js",
   "./src/screens/home.js",
   "./src/screens/day.js",
   "./src/screens/endless.js",
@@ -77,6 +79,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.includes("/packs/")) return;      // пакеты живут в IndexedDB
+  if (DEV) return;                                    // разработка: не мешаем сети
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
@@ -86,10 +89,9 @@ self.addEventListener("fetch", (event) => {
       return response;
     }).catch(() => null);
 
-    if (cached && !DEV) return cached;                // сначала кэш
+    if (cached) return cached;                        // сначала кэш
     const fresh = await network;                      // обновление в фоне
     if (fresh) return fresh;
-    if (cached) return cached;                        // в разработке — кэш как запасной
     if (request.mode === "navigate") {
       const shell = await cache.match(new URL("./index.html", self.registration.scope));
       if (shell) return shell;

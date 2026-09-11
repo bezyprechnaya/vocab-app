@@ -1,5 +1,9 @@
 /* Этап 3 — проверка: «помнишь перевод?». Провалы возвращаются в карточки
-   новым кругом, чистый круг закрывает день. */
+   новым кругом, чистый круг закрывает день.
+
+   Ответ и пример занимают место в карточке с самого начала, только скрыты
+   (`.idle` — видимость, а не `hidden`): карточка не растёт в момент
+   «подсмотреть», слово не уезжает, и кнопки ответа не сдвигаются. */
 
 import { el, posLabel, exampleBlock, formatDate } from "../ui.js";
 import * as session from "../session.js";
@@ -16,9 +20,10 @@ export async function render(ctx, current) {
 
   const settings = await settingsStore.get();
   const shown = current.checkRoundTotal - current.checkQueue.length + 1;
-  const answerBox = el("div.word-card__tr", { hidden: true });
+  const answerBox = el("div.word-card__tr.idle", {}, lang.meaning(item, settings.lang) || "—");
   // Подсказка — это не только перевод: пример показывает, как слово живёт в речи.
-  const exampleBox = el("div.example-slot", { hidden: true });
+  const example = exampleBlock(lang.example(item, settings.study), lang.example(item, settings.lang));
+  const exampleBox = example ? el("div.example-slot.idle", {}, example) : null;
 
   const answer = async (remembered) => {
     await session.answerCheck(current, remembered);
@@ -37,15 +42,9 @@ export async function render(ctx, current) {
       el("button.btn.btn--small.btn--ghost", {
         type: "button",
         onclick: (e) => {
-          answerBox.textContent = lang.meaning(item, settings.lang) || "—";
-          answerBox.hidden = false;
-          const example = exampleBlock(lang.example(item, settings.study),
-            lang.example(item, settings.lang));
-          if (example) {
-            exampleBox.append(example);
-            exampleBox.hidden = false;
-          }
-          e.currentTarget.hidden = true;
+          answerBox.classList.remove("idle");
+          if (exampleBox) exampleBox.classList.remove("idle");
+          e.currentTarget.classList.add("idle");
         },
       }, "Подсмотреть")),
     el("p.screen__lead.center", {}, "Помните перевод?"),

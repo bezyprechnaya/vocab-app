@@ -55,7 +55,7 @@ export async function applyChoice(changes, { onProgress } = {}) {
 
 /** Одинаковая пара бессмысленна: слово и перевод совпали бы. Исключение —
     английский: English → English это толкование, а не тот же самый текст. */
-export function sameSides(code, other) {
+function sameSides(code, other) {
   return code === other && code !== "en";
 }
 

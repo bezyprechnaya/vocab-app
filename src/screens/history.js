@@ -2,7 +2,7 @@
    День можно открыть, повторить или удалить; слова при удалении дня остаются
    выученными (глава I, 3.6). */
 
-import { el, formatDate, scoreLine, confirmAction, toast } from "../ui.js";
+import { el, icon, formatDate, scoreLine, confirmAction, toast } from "../ui.js";
 import * as session from "../session.js";
 import * as settingsStore from "../settings.js";
 import * as summary from "./summary.js";
@@ -33,6 +33,7 @@ async function renderList(ctx) {
   }
 
   const list = el("div.list");
+  list.append(el("header.page-head", {}, el("h1", {}, "История")));
   for (const [date, entries] of byDate) {
     list.append(el("h2.section-title", {}, formatDate(date)));
     for (const day of entries) {
@@ -40,13 +41,13 @@ async function renderList(ctx) {
       list.append(el("button.row", {
         type: "button", onclick: () => ctx.navigate(`#/history/${day.date}`),
       },
-        el("span.hub__icon", {}, meta?.icon || "•"),
+        el("span.hub__icon", {}, icon(meta?.icon || "book")),
         el("span.row__body", {},
           el("span.row__title", {}, meta?.title || day.kind),
           el("span.row__sub", {}, day.phase === "done"
             ? scoreLine(session.score(day))
             : `не закончен · ${PHASE_TEXT[day.phase] || day.phase}`)),
-        el("span.row__chev.hub__chev", {}, "›")));
+        el("span.row__chev", {}, "→")));
     }
   }
   return list;
@@ -61,13 +62,18 @@ async function renderDay(ctx) {
   }
   const settings = await settingsStore.get();
   const screen = el("div.list");
+  screen.append(el("header.page-head", {},
+    el("h1", {}, formatDate(date)),
+    el("button.page-head__back", {
+      type: "button", onclick: () => ctx.navigate("#/history"),
+    }, "‹ Все дни")));
 
   for (const day of entries) {
     const meta = session.KINDS[day.kind];
     const parts = await summary.split(day);
     const done = day.phase === "done";
     screen.append(el("div.card", {},
-      el("div.row__title", {}, `${meta?.icon || "•"} ${meta?.title || day.kind}`),
+      el("div.row__title", {}, meta?.title || day.kind),
       el("div.row__sub", {}, done ? "День закрыт" : "День не закончен"),
       parts.total
         ? el("div", { style: "margin-top:12px" },

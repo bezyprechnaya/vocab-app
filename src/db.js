@@ -11,18 +11,13 @@
      settings  ключ "app"     — активный язык и уровень, флаг онбординга
 */
 
-export const DB_NAME = "vocab";
-export const DB_VERSION = 1;
+const DB_NAME = "vocab";
+const DB_VERSION = 1;
 export const STORES = ["items", "progress", "sessions", "packs", "settings"];
 
 export const itemKey = (en, pos) => `${en}|${pos}`;
 export const sessionKey = (date, kind) => `${date}|${kind}`;
 export const packKey = (lang, level) => `${lang}|${level}`;
-
-export function parseItemKey(key) {
-  const i = key.lastIndexOf("|");
-  return { en: key.slice(0, i), pos: key.slice(i + 1) };
-}
 
 let dbPromise = null;
 
@@ -57,7 +52,8 @@ export function open() {
   return dbPromise;
 }
 
-export function forget() { dbPromise = null; }
+/** Забыть открытый коннект: следующий open() откроет базу заново. */
+function forget() { dbPromise = null; }
 
 export function request(req) {
   return new Promise((resolve, reject) => {
@@ -89,18 +85,8 @@ export async function getAll(store, query, count) {
   return transact([store], "readonly", (s) => request(s[store].getAll(query, count)));
 }
 
-export async function getAllKeys(store, query) {
-  return transact([store], "readonly", (s) => request(s[store].getAllKeys(query)));
-}
-
 export async function put(store, value) {
   return transact([store], "readwrite", (s) => request(s[store].put(value)));
-}
-
-export async function putAll(store, values) {
-  return transact([store], "readwrite", (s) => {
-    for (const value of values) s[store].put(value);
-  });
 }
 
 export async function remove(store, key) {

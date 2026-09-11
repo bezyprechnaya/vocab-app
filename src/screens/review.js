@@ -1,11 +1,11 @@
 /* Повторение дня: те же карточки, но прогресс не меняется — это перечитывание,
    а не новый день. Очередь живёт только на экране и никуда не пишется. */
 
-import { el, posLabel, exampleBlock, originBadge, formatDate, shuffle, toast } from "../ui.js";
+import { el, formatDate, shuffle, toast } from "../ui.js";
+import { flipCard } from "../flip.js";
 import * as db from "../db.js";
 import * as session from "../session.js";
 import * as settingsStore from "../settings.js";
-import * as lang from "../lang.js";
 
 export const title = () => "Повторение";
 
@@ -32,28 +32,15 @@ export async function render(ctx) {
   const draw = () => {
     box.textContent = "";
     const item = queue[index];
-    const flip = el("div.flip__inner");
-    const turn = () => flip.classList.toggle("flipped");
-
-    const word = lang.word(item, settings.study);
-    flip.append(
-      el("div.flip__face", {},
-        el("div.word-card", { onclick: turn },
-          el("div.word-card__en", {}, word),
-          el("div.word-card__pos", {}, posLabel(item.pos)),
-          el("div.word-card__hint", {}, "Нажмите, чтобы посмотреть перевод"))),
-      el("div.flip__face.flip__face--back", {},
-        el("div.word-card", { onclick: turn },
-          el("div.word-card__en", {}, word),
-          el("div.word-card__tr", {}, lang.meaning(item, settings.lang) || "—",
-            originBadge(lang.origin(item, settings))),
-          exampleBlock(lang.example(item, settings.study), lang.example(item, settings.lang)))));
+    // Кнопки «Назад»/«Дальше» на месте всегда, а высоту коробки задаёт оборот —
+    // поэтому при перевороте карточка стоит там же, где стояла.
+    const flip = flipCard(item, settings);
 
     box.append(
       el("div.day__head", {},
         el("span", {}, `${session.KINDS[kind]?.title || kind} · ${index + 1} из ${queue.length}`),
         el("span", {}, formatDate(date))),
-      el("div.flip", {}, flip),
+      el("div.flip-stage", {}, el("div.flip", {}, flip)),
       el("div.actions", {},
         el("button.btn", { type: "button", disabled: index === 0, onclick: () => { index--; draw(); } },
           "Назад"),

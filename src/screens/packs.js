@@ -32,6 +32,7 @@ function connectionWarning(bytes) {
 export async function render(ctx) {
   const settings = await settingsStore.get();
   const screen = el("div.list");
+  screen.append(el("header.page-head", {}, el("h1", {}, "Языки и уровни")));
 
   let catalog = [];
   let catalogError = null;

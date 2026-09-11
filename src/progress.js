@@ -8,11 +8,11 @@
 import * as db from "./db.js";
 import * as lang from "./lang.js";
 
-export const NEW = "new";
+const NEW = "new";                       // статус «ни разу не попадал в день» — локальная деталь модуля
 export const LEARNING = "learning";
 export const LEARNED = "learned";
 
-export async function map(ids) {
+async function map(ids) {
   const rows = await db.getAll("progress");
   const wanted = ids ? new Set(ids) : null;
   const out = new Map();
@@ -22,17 +22,12 @@ export async function map(ids) {
   return out;
 }
 
-export async function statusOf(id) {
-  const row = await db.get("progress", id);
-  return row ? row.status : NEW;
-}
-
-export async function idsWithStatus(status) {
+async function idsWithStatus(status) {
   const rows = await db.indexAll("progress", "status", status);
   return rows.map((r) => r.id);
 }
 
-export async function countWithStatus(status) {
+async function countWithStatus(status) {
   return db.indexCount("progress", "status", status);
 }
 

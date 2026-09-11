@@ -1,7 +1,7 @@
 /* Мелочи, общие для всех экранов: создание узлов, тосты, модальные окна,
    форматирование дат и частей речи. */
 
-export const POS_LABELS = {
+const POS_LABELS = {
   n: "сущ.", v: "глаг.", adj: "прил.", adv: "нареч.", prep: "предлог",
   conj: "союз", pron: "мест.", det: "опред.", num: "числ.",
 };
@@ -44,6 +44,39 @@ export function clear(node) {
   return node;
 }
 
+/* Значки — тонкая линия в один вес, без заливки и без скруглений: тот же
+   штрих, что у рамок и разделителей. Эмодзи на их месте выглядели чужеродно —
+   у каждого свой цвет и своя жирность, и строй списка от них рассыпался. */
+
+const ICONS = {
+  book: '<path d="M3.5 4.5h6a2 2 0 0 1 2 2v13a1.8 1.8 0 0 0-1.8-1.5H3.5z"/>'
+    + '<path d="M20.5 4.5h-6a2 2 0 0 0-2 2v13a1.8 1.8 0 0 1 1.8-1.5h6.2z"/>',
+  link: '<path d="M9.5 14.5 14.5 9.5"/>'
+    + '<path d="M11 6.5 13 4.5a3.5 3.5 0 0 1 5 5l-2 2"/>'
+    + '<path d="M13 17.5 11 19.5a3.5 3.5 0 0 1-5-5l2-2"/>',
+  infinity: '<path d="M12 12c1.6-2.2 2.8-3.3 4.4-3.3a3.3 3.3 0 0 1 0 6.6C14.8 15.3 13.6 14.2 12 12z"/>'
+    + '<path d="M12 12c-1.6 2.2-2.8 3.3-4.4 3.3a3.3 3.3 0 0 1 0-6.6C9.2 8.7 10.4 9.8 12 12z"/>',
+  calendar: '<rect x="3.5" y="5" width="17" height="15.5"/>'
+    + '<path d="M3.5 9.5h17"/><path d="M8 3.5v3"/><path d="M16 3.5v3"/>',
+  globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/>'
+    + '<path d="M12 3.5a13 13 0 0 1 3.4 8.5A13 13 0 0 1 12 20.5 13 13 0 0 1 8.6 12 13 13 0 0 1 12 3.5z"/>',
+  settings: '<path d="M3.5 8h11.8M19.7 8h.8"/><circle cx="17.5" cy="8" r="2.2"/>'
+    + '<path d="M3.5 16h.8M8.7 16h11.8"/><circle cx="6.5" cy="16" r="2.2"/>',
+  check: '<polyline points="4 12.5 9.5 18 20 6"/>',
+  flame: '<path d="M12 3.5c3 3 5 5.3 5 8.5a5 5 0 0 1-10 0c0-1.6.7-3 2-4.4.3 1.3 1 2 2 2.2-.4-2.4.3-4.4 1-6.3z"/>',
+};
+
+/** Значок как узел: `el("span.hub__icon", {}, icon("book"))`. */
+export function icon(name) {
+  const box = document.createElement("span");
+  box.className = "icon";
+  box.setAttribute("aria-hidden", "true");
+  box.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"`
+    + ` stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter">`
+    + `${ICONS[name] || ""}</svg>`;
+  return box;
+}
+
 let toastTimer = null;
 
 export function toast(message) {
@@ -65,7 +98,7 @@ export function confirmAction({ title, text, confirmLabel = "Удалить", ex
       extra || null,
       el("div.modal__actions", {},
         el("button.btn", { type: "button", onclick: () => close(false) }, "Отмена"),
-        el("button.btn.btn--bad", { type: "button", onclick: () => close(true) }, confirmLabel))));
+        el("button.btn.btn--danger", { type: "button", onclick: () => close(true) }, confirmLabel))));
     box.hidden = false;
     box.onclick = (e) => { if (e.target === box) close(false); };
   });
@@ -120,15 +153,6 @@ export function progressModal({ title, text = "", cancelLabel = "Отмена" }
 export function todayISO(date = new Date()) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-/** Метка в левом углу верхней панели: флаг языка и уровень. На экране с кнопкой
-    «назад» её не бывает — угол один, и кнопка важнее. `null` убирает метку. */
-export function setTopbarMark(nodes) {
-  const box = document.getElementById("mark");
-  clear(box);
-  if (nodes) box.append(...[nodes].flat());
-  box.hidden = !nodes;
 }
 
 /** Соседний день в ISO: `shift` — сколько дней вперёд или назад. Дата собирается
@@ -202,7 +226,7 @@ export function exampleBlock(exStudy, exTr) {
     onclick: (e) => { e.stopPropagation(); block.classList.toggle("example--clamped"); },
     title: "Нажмите, чтобы раскрыть",
   },
-    el("div.example__en", {}, exStudy),
+    el("div.example__en", {}, `«${exStudy}»`),
     exTr && exTr !== exStudy ? el("div.example__tr", {}, exTr) : null);
   return block;
 }

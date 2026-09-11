@@ -26,6 +26,7 @@ export async function render(ctx) {
   const totals = await progress.totals();
   const sessions = await db.count("sessions");
   const screen = el("div.list");
+  screen.append(el("header.page-head", {}, el("h1", {}, "Настройки")));
 
   // ── размер дня ───────────────────────────────────────────────────────
   // Слова и фразовые глаголы — два занятия одного дня, поэтому и потолок общий:

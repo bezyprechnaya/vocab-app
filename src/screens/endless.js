@@ -7,14 +7,12 @@
    Прогресс общий с днями: «знаю» отмечает слово выученным, и день его больше
    не предложит. Сессия дня при этом не создаётся — история остаётся про дни. */
 
-import {
-  el, posLabel, exampleBlock, originBadge, plural, toast, todayISO, attachSwipe, shuffle,
-} from "../ui.js";
+import { el, plural, toast, todayISO, attachSwipe, shuffle } from "../ui.js";
+import { flipCard } from "../flip.js";
 import * as db from "../db.js";
 import * as session from "../session.js";
 import * as progress from "../progress.js";
 import * as settingsStore from "../settings.js";
-import * as lang from "../lang.js";
 import { levelLabel } from "../packs.js";
 
 export const title = () => "Бесконечный режим";
@@ -97,21 +95,7 @@ export async function render(ctx) {
       await draw();
     };
 
-    const flip = el("div.flip__inner");
-    const turn = () => flip.classList.toggle("flipped");
-    const word = lang.word(item, settings.study);
-    flip.append(
-      el("div.flip__face", {},
-        el("div.word-card", { onclick: turn },
-          el("div.word-card__en", {}, word),
-          el("div.word-card__pos", {}, posLabel(item.pos)),
-          el("div.word-card__hint", {}, "Нажмите, чтобы посмотреть перевод"))),
-      el("div.flip__face.flip__face--back", {},
-        el("div.word-card", { onclick: turn },
-          el("div.word-card__en", {}, word),
-          el("div.word-card__tr", {}, lang.meaning(item, settings.lang) || "—",
-            originBadge(lang.origin(item, settings))),
-          exampleBlock(lang.example(item, settings.study), lang.example(item, settings.lang)))));
+    const flip = flipCard(item, settings);
     attachSwipe(flip, { onLeft: repeat, onRight: known });
 
     box.append(
@@ -119,7 +103,7 @@ export async function render(ctx) {
       el("div.day__head", {},
         el("span", {}, kind === "phrasal" ? "Фразовые глаголы" : levelLabel(level)),
         el("span", {}, `выучено ${learned} · осталось ${left}`)),
-      el("div.flip", {}, flip),
+      el("div.flip-stage", {}, el("div.flip", {}, flip)),
       el("p.screen__lead.center", {}, again
         ? plural(again, "карточка вернётся", "карточки вернутся", "карточек вернутся") + " ещё раз"
         : "Режим без дневного лимита: карточки идут, пока не остановитесь."),

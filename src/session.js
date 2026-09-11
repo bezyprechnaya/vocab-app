@@ -20,11 +20,9 @@ import { shuffle, todayISO, shiftDate, scoreLine } from "./ui.js";
 import { LEVELS } from "./packs.js";
 
 export const KINDS = {
-  words: { title: "Слова дня", short: "Слова", icon: "📘", route: "#/day/words" },
-  phrasal: { title: "Фразовые глаголы", short: "Фразовые", icon: "🔗", route: "#/day/phrasal" },
+  words: { title: "Слова дня", short: "Слова", icon: "book" },
+  phrasal: { title: "Фразовые глаголы", short: "Фразовые", icon: "link" },
 };
-
-export const PHASES = ["sort", "cards", "check", "done"];
 
 export function isDone(session) {
   return !!session && session.phase === "done";
@@ -34,8 +32,9 @@ export async function load(kind, date = todayISO()) {
   return db.get("sessions", db.sessionKey(date, kind));
 }
 
-export async function save(session) {
-  // Закрытый день не перезаписываем: возврат на экран дня не должен его «открыть».
+/** Перезапись сессии. Закрытый день не перезаписываем: возврат на экран дня
+    не должен его «открыть». */
+async function save(session) {
   const existing = await db.get("sessions", session.id);
   if (existing && existing.phase === "done" && session.phase !== "done") return existing;
   await db.put("sessions", session);
@@ -106,7 +105,7 @@ export async function currentItem(session) {
   return id ? db.get("items", id) : null;
 }
 
-export function currentId(session) {
+function currentId(session) {
   if (session.phase === "sort") return session.sortQueue[0] || null;
   if (session.phase === "cards") return session.cardQueue[0] || null;
   if (session.phase === "check") return session.checkQueue[0] || null;
