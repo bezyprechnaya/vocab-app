@@ -60,8 +60,8 @@
    "level": "a1",
    "kind": "words",
    "count": 104,
-   "bytes": 5721,
-   "builtAt": "2026-09-04",
+   "bytes": 15674,
+   "builtAt": "2026-09-12",
    "path": "ru/a1.json"
   },
   {
@@ -69,8 +69,8 @@
    "level": "a2",
    "kind": "words",
    "count": 552,
-   "bytes": 30059,
-   "builtAt": "2026-09-04",
+   "bytes": 87983,
+   "builtAt": "2026-09-12",
    "path": "ru/a2.json"
   },
   {
@@ -78,8 +78,8 @@
    "level": "b1",
    "kind": "words",
    "count": 1441,
-   "bytes": 151305,
-   "builtAt": "2026-09-04",
+   "bytes": 275754,
+   "builtAt": "2026-09-12",
    "path": "ru/b1.json"
   },
   {
@@ -87,8 +87,8 @@
    "level": "b2",
    "kind": "words",
    "count": 1232,
-   "bytes": 71831,
-   "builtAt": "2026-09-04",
+   "bytes": 139108,
+   "builtAt": "2026-09-12",
    "path": "ru/b2.json"
   },
   {
@@ -96,8 +96,8 @@
    "level": "c1",
    "kind": "words",
    "count": 110,
-   "bytes": 6660,
-   "builtAt": "2026-09-04",
+   "bytes": 7751,
+   "builtAt": "2026-09-12",
    "path": "ru/c1.json"
   },
   {
@@ -105,8 +105,8 @@
    "level": "c2",
    "kind": "words",
    "count": 141,
-   "bytes": 8288,
-   "builtAt": "2026-09-04",
+   "bytes": 10589,
+   "builtAt": "2026-09-12",
    "path": "ru/c2.json"
   },
   {

@@ -10,46 +10,41 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
-<!-- Начертания подгружаются из сети, но приложение офлайновое: если шрифтов нет,
+<!-- Начертания подгружаются из сети, но приложение офлайновое: без них
      остаются Georgia и системный гротеск — макет от этого не меняется. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Source+Sans+3:wght@300;400;500;600&display=swap">
-<link rel="stylesheet" href="./styles/main.css">
+<link rel="stylesheet" href="./style.css">
 </head>
 <body>
 <div class="app" data-chrome="top">
   <aside class="side">
     <div class="side__brand">VOCAB</div>
-    <nav class="side__nav">
-      <button class="side__item" type="button" data-route="#/home" data-icon="book">Обучение</button>
-      <button class="side__item" type="button" data-route="#/history" data-icon="calendar">История</button>
-      <button class="side__item" type="button" data-route="#/packs" data-icon="globe">Языки</button>
-      <button class="side__item" type="button" data-route="#/settings" data-icon="settings">Настройки</button>
-    </nav>
-    <div class="side__foot">
-      <button class="side__item" type="button" data-route="#/help" id="help-link">Как это работает</button>
+    <nav class="side__nav" id="side-nav" hx-target="#app"></nav>
+    <div class="side__foot" hx-target="#app">
+      <button class="side__item" type="button" hx-get="/help">Как это работает</button>
     </div>
   </aside>
 
   <div class="main">
     <header class="topbar">
-      <button class="topbar__back" id="back" type="button" hidden>‹ Назад</button>
+      <button class="topbar__back" id="back" type="button" hx-on:click="history.back()" hidden>‹ Назад</button>
       <h1 class="topbar__title" id="title">VOCAB</h1>
       <span class="topbar__slot" aria-hidden="true"></span>
     </header>
 
-    <main class="screen" id="app" tabindex="-1"></main>
+    <!-- Все запросы внутри экрана целятся сюда же: hx-target наследуется. -->
+    <main class="screen" id="app" hx-target="this" tabindex="-1"></main>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <div class="modal" id="modal" hidden></div>
+  <dialog class="modal" id="dialog"></dialog>
 </div>
 
-<noscript>
-  <p style="padding:1rem">Приложению нужен JavaScript: слова и прогресс хранятся прямо в браузере.</p>
-</noscript>
+<noscript><p style="padding:1rem">Приложению нужен JavaScript: слова и прогресс хранятся прямо в браузере.</p></noscript>
 
-<script type="module" src="./src/main.js"></script>
+<script src="./vendor/htmx.min.js"></script>
+<script type="module" src="./src/app.js"></script>
 </body>
 </html>
